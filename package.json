@@ -3,7 +3,11 @@
   "version": "0.1.0",
   "description": "discord bot for judges",
   "main": "server.js",
+  "engines": {
+	"node": "6.9.1"
+  },
   "scripts": {
+	"start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

@@ -21,6 +21,7 @@ bot.on("message", msg => {
 				if(card.loyalty) response.push(card.loyalty);
 				if(card.power) response.push(card.power.replace(/\*/g,'\\*') + "/" + card.toughness.replace(/\*/g,'\\*'));
 				response.push(card.printings.join(", "));
+				response.push("http://magiccards.info/query?q=!"+encodeURIComponent(card.name));
 				if(card.imageUrl) response.push(card.imageUrl);
 				msg.channel.sendMessage(response.join("\n"));
 		    }

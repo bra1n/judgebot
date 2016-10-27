@@ -18,15 +18,9 @@ const help = "!help";
  */
 bot.on("message", msg => {
 	if(bot.user.id === msg.author.id) {return;}
-	var query = msg.content.split(" ");
-	if(!query){return;}
-	var command = query[0].toLowerCase();
-	var parameter;
-	if(query.length > 1) {
-		parameter = query.slice(1).join(" ");
-	}else{
-		parameter = "";
-	}
+	const query = msg.content.split(" ");
+	const command = query[0].toLowerCase();
+	const parameter = query.length > 1 ? query.slice(1).join(" ") : "";
 	switch(command){
 		case mtr:
 			new mtrAggregator().getContent(parameter,respondToMsg);

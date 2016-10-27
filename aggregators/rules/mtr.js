@@ -1,16 +1,16 @@
-function MTR(){
-    this.Location = "http://blogs.magicjudges.org/rules/mtr/";
-    this.find = function(parameter,callback){
-
-    };
-}
-MTR.prototype.getContent = function(parameter,callback){
-    if(parameter){
-        this.find(parameter,callback());
-    }else{
-        callback(this.Location);
+class MTR{
+    constructor(){
+        this.Location = "http://blogs.magicjudges.org/rules/mtr/";
     }
-
-};
-
+    find(parameter,callback){
+        //todo
+    }
+    getContent(parameter,callback){
+        if(parameter){
+            this.find(parameter,callback());
+        }else{
+            callback(this.Location);
+        }
+    }
+}
 module.exports = MTR;

@@ -1,9 +1,11 @@
-function MtgCardLoader(){
-    var request = require("request");
-    var cardApi = "https://api.magicthegathering.io/v1/cards?name=";
-    this.find = function(cardName,callback){
+var request = require("request");
+class MtgCardLoader{
+    constructor(){
+        this.cardApi = "https://api.magicthegathering.io/v1/cards?name=";
+    }
+    find(cardName,callback){
         request({
-                url: cardApi + cardName,
+                url: this.cardApi + cardName,
                 json: true
             },
             /**
@@ -31,8 +33,7 @@ function MtgCardLoader(){
                     callback(cardInfo.join("\n"));
                 }
             });
-    };
+    }
+    getContent(parameter,callback){this.find(parameter,callback);}
 }
-MtgCardLoader.prototype.getContent = function(parameter,callback){this.find(parameter,callback);};
-
 module.exports = MtgCardLoader;

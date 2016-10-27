@@ -1,14 +1,16 @@
-class JAR{
-    constructor(){
+class JAR {
+    constructor() {
         this.Location = "http://blogs.magicjudges.org/rules/ipg/";
     }
-    find(parameter,callback){
+
+    find(parameter, callback) {
         //todo
     }
-    getContent(parameter,callback){
-        if(parameter){
-            this.find(parameter,callback());
-        }else{
+
+    getContent(parameter, callback) {
+        if (parameter) {
+            this.find(parameter, callback());
+        } else {
             callback(this.Location);
         }
 

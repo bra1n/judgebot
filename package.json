@@ -1,6 +1,6 @@
 {
   "name": "judgebot",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "discord bot for judges",
   "main": "server.js",
   "engines": {

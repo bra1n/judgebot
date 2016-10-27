@@ -1,17 +1,20 @@
 var Discord = require("discord.js");
 var bot = new Discord.Client();
-var mtrAggregator = new require("./aggregators/rules/mtr.js");
-var ipgAggregator = new require("./aggregators/rules/ipg.js");
-var crAggregator = new require("./aggregators/rules/cr.js");
-var jarAggregator = new require("./aggregators/rules/jar.js");
-var cardAggregator = new require("./aggregators/mtg_cards/cards.js");
 
-const mtr = "!mtr";
-const ipg = "!ipg";
-const cr = "!cr";
-const jar = "!jar";
-const card = "!card";
-const help = "!help";
+var mtrAggregator = new (require("./aggregators/rules/mtr.js"))();
+var ipgAggregator = new (require("./aggregators/rules/ipg.js"))();
+var crAggregator = new (require("./aggregators/rules/cr.js"))();
+var jarAggregator = new (require("./aggregators/rules/jar.js"))();
+var cardAggregator = new (require("./aggregators/mtg_cards/cards.js"))();
+
+var handlers = {
+	"!mtr": mtrAggregator.getContent,
+	"!ipg": ipgAggregator.getContent,
+	"!cr": crAggregator.getContent,
+	"!define": crAggregator.getGlossaryEntry,
+	"!jar": jarAggregator.getContent,
+	"!card": cardAggregator.getContent,
+}
 
 /**
  * @param msg.channel.sendMessage
@@ -21,26 +24,11 @@ bot.on("message", msg => {
 	const query = msg.content.split(" ");
 	const command = query[0].toLowerCase();
 	const parameter = query.length > 1 ? query.slice(1).join(" ") : "";
-	switch(command){
-		case mtr:
-			new mtrAggregator().getContent(parameter,respondToMsg);
-			break;
-        case ipg:
-            new ipgAggregator().getContent(parameter,respondToMsg);
-            break;
-        case cr:
-            new crAggregator().getContent(parameter,respondToMsg);
-            break;
-        case jar:
-            new jarAggregator().getContent(parameter,respondToMsg);
-            break;
-		case card:
-		    new cardAggregator().getContent(parameter,respondToMsg);
-			break;
-        case help:
-            //todo
-            break;
+	let handler = handlers[command];
+	if (handler) {
+		handler(parameter, respondToMsg);
 	}
+
 	function respondToMsg(response) {
         if(response){
             msg.channel.sendMessage(response);

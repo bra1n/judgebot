@@ -48,7 +48,7 @@ class MtgCardLoader {
             });
     }
 
-    getContent(parameter, callback) {
+    getContent(command, parameter, callback) {
         this.find(parameter, callback);
     }
 }

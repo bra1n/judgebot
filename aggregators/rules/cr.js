@@ -1,7 +1,8 @@
 const console = require("console");
 const request = require("request");
 
-const CR_ADDRESS = process.env.CR_ADDRESS; // http://media.wizards.com/2016/docs/MagicCompRules_20160930.txt or newer
+// Using the current CR as the default, not sure if they actually stick around once new ones are published
+const CR_ADDRESS = process.env.CR_ADDRESS || "http://media.wizards.com/2016/docs/MagicCompRules_20160930.txt";
 
 class CR{
     constructor(){

@@ -1,4 +1,5 @@
 const jsDOM = require("jsdom");
+const jQuery = require("jquery");
 class IPG {
     constructor() {
         this.location = "http://blogs.magicjudges.org/rules/ipg";
@@ -13,8 +14,9 @@ class IPG {
              * @param window
              */
             function(err,window){
+                const $ = jQuery(window);
                 const maxLength = 2000;
-                const $ = require("jquery")(window);
+                $(window);
                 let result = ["**"+$(".entry-header h1:first").text()+"**\n"];
                 const penalty = $(".alert-warning:first");
                 if(penalty.length>0){

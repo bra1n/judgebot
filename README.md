@@ -5,12 +5,12 @@ Discord Bot for Magic / Judge related content
 
 ## Supported commands
 
-- **!card \<partial cardname\>**: searches for an (English) card by name and outputs the card together with an image, if available
+- **!card \<partial cardname\>**: searches for an (English) card by name and outputs the card together with an image, if available, *Example: !card Tarmogoyf*
+- **!cr \<paragraph number\>**: shows the chosen paragraph from the [Comprehensive Rules](https://rules.wizards.com/rulebook.aspx?game=Magic&category=Game+Rules), *Example: !cr 100.6b*
 
 ## Coming soon
 
 - **!mtr \<paragraph number\>**
-- **!cr \<paragraph number\>**
 - **!ipg \<paragraph number\>**
 - **!jar \<paragraph number\>**
 - **!help**

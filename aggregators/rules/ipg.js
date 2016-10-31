@@ -13,7 +13,7 @@ class IPG {
              * @param err
              * @param window
              */
-            function(err,window){
+            (err,window)=>{
                 const $ = jQuery(window);
                 const maxLength = 2000;
                 $(window);

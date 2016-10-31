@@ -7,7 +7,7 @@ class JAR {
         //todo
     }
 
-    getContent(parameter, callback) {
+    getContent(command, parameter, callback) {
         if (parameter) {
             this.find(parameter, callback());
         } else {

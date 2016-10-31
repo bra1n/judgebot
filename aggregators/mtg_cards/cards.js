@@ -80,7 +80,7 @@ class MtgCardLoader {
             });
     }
 
-    getContent(command, parameter, callback) {
+    getContent(command , parameter, callback) {
         this.find(parameter.toLowerCase(), callback);
     }
 }

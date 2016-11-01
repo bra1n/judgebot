@@ -22,7 +22,30 @@ class MtgCardLoader {
              **/
             (error, response, body) => {
                 if (!error && response.statusCode === 200 && body.cards && body.cards.length) {
-                    const card = body.cards[0];
+                    const cardMap = new Map();
+                    body.cards.forEach(function(card){
+                        if(cardMap.has(card.name)){
+                            if(!cardMap.get(card.name).imageUrl && card.imageUrl){
+                                cardMap.set(card.name,card);
+                            }
+                        }else{
+                            cardMap.set(card.name,card);
+                        }
+                    });
+                    const cards =  Array.from(cardMap).map(function(element){
+                        return element[1];
+                    });
+                    let card = cards.find(function(card){
+                        return card.name.toLowerCase() === cardName;
+                    });
+                    if(!card){
+                        card = cards.find(function (card) {
+                           return card.name.toLowerCase().startsWith(cardName);
+                        })
+                    }
+                    if(!card){
+                        card = cards[0];
+                    }
                     const cardInfo = ["**" + card.name + "**"];
                     if (card.type) {
                         cardInfo.push(card.type);
@@ -44,12 +67,21 @@ class MtgCardLoader {
                         cardInfo.push(card.imageUrl);
                     }
                     callback(cardInfo.join("\n"));
+                    if(cards.length>1){
+                        const cardNames = [];
+                        cards.forEach(function(element){
+                            if(!(element.name===card.name)){
+                                cardNames.push((element.name));
+                            }
+                        });
+                        callback("Other matching cards are: " + cardNames.join(", "))
+                    }
                 }
             });
     }
 
-    getContent(command, parameter, callback) {
-        this.find(parameter, callback);
+    getContent(command , parameter, callback) {
+        this.find(parameter.toLowerCase(), callback);
     }
 }
 module.exports = MtgCardLoader;

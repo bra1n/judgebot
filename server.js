@@ -29,8 +29,10 @@ bot.on("message", msg => {
     if (handler) {
         handler.getContent(command, parameter, respondToMsg);
     }
-    function respondToMsg(response) {
-        if (response) {
+    function respondToMsg(response, attachment, filename) {
+        if (attachment) {
+            msg.channel.sendFile(attachment, filename, response);
+        } else if (response) {
             msg.channel.sendMessage(response);
         }
     }

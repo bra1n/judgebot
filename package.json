@@ -22,7 +22,6 @@
   "dependencies": {
     "discord.js": "^9.3.1",
     "request": "^2.76.0",
-    "jsdom": "^9.8.3",
-    "jquery": "^1.7.4"
+    "cheerio": "0.22.0"
   }
 }

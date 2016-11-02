@@ -32,13 +32,8 @@ class MtgCardLoader {
         const differentCardsWithoutImage = _.differenceBy(cardsWithoutImage, cardsWithImage, "name");
         const uniqCards = _.uniqBy(_.concat(cardsWithImage, differentCardsWithoutImage), "name");
 
-        // Look for an exact match by name
-        let card = uniqCards.find(c => c.name.toLowerCase() === cardName);
-        if (!card){
-            // Use a hit which shares the longest common prefix with the search term
-            card = _.maxBy(uniqCards, c => longestCommonPrefix(cardName, c.name.toLowerCase()));
-        }
-        return card;
+        return uniqCards.find(c => c.name.toLowerCase() === cardName) ||
+			uniqCards.find(c => c.name.toLowerCase().startsWith(cardName)) || uniqCards[0];
     }
     getContent(command , parameter, callback) {
         const cardName = parameter.toLowerCase();
@@ -50,30 +45,16 @@ class MtgCardLoader {
             if (!error && response.statusCode === 200 && body.cards && body.cards.length) {
                 const card = this.findCard(cardName, body.cards);
                 let response = this.cardToString(card);
-                let otherCardNames = body.cards.map(c => c.name).filter(n => n !== card.name);
+                let otherCardNames = body.cards.filter(c => c.name !== card.name).map(c => "*" + c.name + "*");
                 if (otherCardNames.length) {
                     otherCardNames.sort();
                     otherCardNames = _.sortedUniq(otherCardNames);
-                    response += "\n\nOther matching cards: " + otherCardNames.join(", ");
+                    response += "\n\nOther matching cards: " + otherCardNames.join(" | ");
                 }
                 callback(response, card.imageUrl, _.snakeCase(_.deburr(card.name)) + ".jpg");
             }
         });
     }
-}
-
-function longestCommonPrefix(...strings) {
-    if (strings.length === 0) {
-        return "";
-    }
-    for (let i = 0; i < strings[0].length; i++) {
-        for (let j = 1; j< strings.length; j++) {
-            if (strings[0][i] !== strings[j][i]) {
-                return strings[0].substring(0, i);
-            }
-        }
-    }
-    return strings[0];
 }
 
 module.exports = MtgCardLoader;

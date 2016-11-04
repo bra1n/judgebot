@@ -21,8 +21,10 @@
   },
   "dependencies": {
     "cheerio": "0.22.0",
-    "discord.js": "^9.3.1",
+    "colors": "^1.1.2",
+    "discord.js": "^10.0.1",
     "lodash": "^4.16.6",
+    "log4js": "^1.0.0",
     "request": "^2.76.0"
   }
 }

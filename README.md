@@ -17,10 +17,11 @@ node server.js
 
 - **!card \<partial cardname\>**: searches for an (English) card by name and outputs the card together with an image, if available, *Example: !card Tarmogoyf*
 - **!cr \<paragraph number\>**: shows the chosen paragraph from the [Comprehensive Rules](https://rules.wizards.com/rulebook.aspx?game=Magic&category=Game+Rules), *Example: !cr 100.6b*
-- **!ipg \<paragraph number\>**: shows the chosen paragraph from the [Infraction Procedure Guide](http://blogs.magicjudges.org/rules/ipg/), *Example: !ipg 2.1*
+- **!define \<keyword\>**: shows the chosen keyword definition from the [Comprehensive Rules](https://rules.wizards.com/rulebook.aspx?game=Magic&category=Game+Rules), *Example: !define banding*
+- **!ipg \<paragraph number\>**: shows the chosen paragraph from the [Infraction Procedure Guide](http://blogs.magicjudges.org/rules/ipg/), *Example: !ipg 2.1, !ipg hce*
+- **!help**: show a list of available commands (in a direct message)
 
 ## Coming soon
 
 - **!mtr \<paragraph number\>**
 - **!jar \<paragraph number\>**
-- **!help**

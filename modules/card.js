@@ -4,10 +4,16 @@ const _ = require("lodash");
 class MtgCardLoader {
     constructor() {
         this.cardApi = "https://api.magicthegathering.io/v1/cards?name=";
+        this.commands = ["card"];
     }
+
+    getCommands() {
+        return this.commands;
+    }
+
     cardToString(card) {
         const manaCost = card.manaCost ? " " + card.manaCost : "";
-        const cardInfo = ["**" + card.name + "**" + manaCost];
+        const cardInfo = [":black_square_button: **" + card.name + "**" + manaCost];
         if (card.type) {
             cardInfo.push(card.type);
         }
@@ -26,6 +32,7 @@ class MtgCardLoader {
         cardInfo.push("http://magiccards.info/query?q=!" + encodeURIComponent(card.name));
         return cardInfo.join("\n");
     }
+
     findCard(cardName, cards) {
         // create an array containing each card exactly once, preferring cards with image
         const [cardsWithImage, cardsWithoutImage] = _.partition(cards, "imageUrl");
@@ -33,9 +40,10 @@ class MtgCardLoader {
         const uniqCards = _.uniqBy(_.concat(cardsWithImage, differentCardsWithoutImage), "name");
 
         return uniqCards.find(c => c.name.toLowerCase() === cardName) ||
-			uniqCards.find(c => c.name.toLowerCase().startsWith(cardName)) || uniqCards[0];
+            uniqCards.find(c => c.name.toLowerCase().startsWith(cardName)) || uniqCards[0];
     }
-    getContent(command , parameter, callback) {
+
+    handleMessage(command, parameter, msg) {
         const cardName = parameter.toLowerCase();
         request({
             url: this.cardApi + cardName,
@@ -49,9 +57,9 @@ class MtgCardLoader {
                 if (otherCardNames.length) {
                     otherCardNames.sort();
                     otherCardNames = _.sortedUniq(otherCardNames);
-                    response += "\n\nOther matching cards: " + otherCardNames.join(" | ");
+                    response += "\n\n:arrow_right: Other matching cards: :small_blue_diamond:" + otherCardNames.join(" :small_blue_diamond:");
                 }
-                callback(response, card.imageUrl, _.snakeCase(_.deburr(card.name)) + ".jpg");
+                msg.channel.sendFile(card.imageUrl, _.snakeCase(_.deburr(card.name)) + ".jpg", response);
             }
         });
     }

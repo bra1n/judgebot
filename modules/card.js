@@ -57,7 +57,7 @@ class MtgCardLoader {
                 if (otherCardNames.length) {
                     otherCardNames.sort();
                     otherCardNames = _.sortedUniq(otherCardNames);
-                    response += "\n\n:arrow_right: Other matching cards: :small_blue_diamond:" + otherCardNames.join(" :small_blue_diamond:");
+                    response += "\n\n:arrow_right: Other matching cards: :large_blue_diamond:" + otherCardNames.join(" :large_blue_diamond:");
                 }
                 msg.channel.sendFile(card.imageUrl, _.snakeCase(_.deburr(card.name)) + ".jpg", response);
             }

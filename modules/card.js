@@ -59,7 +59,11 @@ class MtgCardLoader {
                     otherCardNames = _.sortedUniq(otherCardNames);
                     response += "\n\n:arrow_right: Other matching cards: :large_blue_diamond:" + otherCardNames.join(" :large_blue_diamond:");
                 }
-                msg.channel.sendFile(card.imageUrl, _.snakeCase(_.deburr(card.name)) + ".jpg", response);
+                if (card.imageUrl) {
+                    msg.channel.sendFile(card.imageUrl, _.snakeCase(_.deburr(card.name)) + ".jpg", response);
+                } else {
+                    msg.channel.sendMessage(response);
+                }
             }
         });
     }

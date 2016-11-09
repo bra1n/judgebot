@@ -1,4 +1,3 @@
-const console = require("console");
 const request = require("request");
 const log = require("log4js").getLogger('cr');
 
@@ -84,12 +83,11 @@ class CR {
     handleMessage(command, parameter, msg) {
         if (command === "cr") {
             if (parameter && this.cr) {
-                msg.channel.sendMessage(this.cr[parameter.trim().replace(/\.$/, "").toLowerCase()]);
-            } else {
-                msg.channel.sendMessage('**Comprehensive Rules**: <' + this.location + '>');
+                return msg.channel.sendMessage(this.cr[parameter.trim().replace(/\.$/, "").toLowerCase()]);
             }
+            return msg.channel.sendMessage('**Comprehensive Rules**: <' + this.location + '>');
         } else if (command === "define" && parameter && this.glossary) {
-            msg.channel.sendMessage(this.glossary[parameter.trim().toLowerCase()]);
+            return msg.channel.sendMessage(this.glossary[parameter.trim().toLowerCase()]);
         }
     }
 }

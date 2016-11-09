@@ -6,6 +6,7 @@ class MtgCardLoader {
     constructor() {
         this.cardApi = "https://api.magicthegathering.io/v1/cards?name=";
         this.commands = ["card"];
+        this.maxLength = 2000;
     }
 
     getCommands() {
@@ -57,7 +58,12 @@ class MtgCardLoader {
                 if (otherCardNames.length) {
                     otherCardNames.sort();
                     otherCardNames = _.sortedUniq(otherCardNames);
-                    response += "\n\n:arrow_right: Other matching cards: :large_blue_diamond:" + otherCardNames.join(" :large_blue_diamond:");
+                    response += "\n\n:arrow_right: " + otherCardNames.length + " other matching cards: :large_blue_diamond:" + otherCardNames.join(" :large_blue_diamond:");
+                    if (response.length > this.maxLength) {
+                        response = response.substring(0, this.maxLength);
+                        response = response.substring(0, response.lastIndexOf(" :large_blue_diamond"));
+                        response += "\n\u2026";
+                    }
                 }
                 if (card.imageUrl) {
                     return rp({

@@ -1,4 +1,4 @@
-const request = require("request");
+const rp = require("request-promise-native");
 const cheerio = require("cheerio");
 class IPG {
     constructor() {
@@ -52,7 +52,7 @@ class IPG {
             'tot': '4-6',
             'stalling': '4-7',
             'cheating': '4-8'
-        }
+        };
     }
 
     getCommands() {
@@ -60,48 +60,50 @@ class IPG {
     }
 
     find(parameter, msg) {
-        request({
-                url: this.location + parameter
-            },
-            (error, response, body) => {
-                if (!error && response.statusCode === 200) {
-                    const $ = cheerio.load(body);
-                    let result = ["**" + $(".entry-header h1").first().text() + "**\n"];
+        const options = {
+            url: this.location + parameter,
+            simple: false,
+            resolveWithFullResponse: true
+        };
+        return rp(options).then(response => {
+            if (response.statusCode === 200) {
+                const $ = cheerio.load(response.body);
+                let result = ["**" + $(".entry-header h1").first().text() + "**\n"];
 
-                    const penalty = $(".alert-warning").first();
-                    if (penalty.length > 0) {
-                        result.push("*" + penalty.text().replace(/\r?\n|\r/g, ' ').trim().replace(" ", ": ") + "*\n");
-                        penalty.remove();
-                    }
-
-                    const article = $("article");
-                    article.find(".entry-header, .page-navigation, em").remove();
-
-                    const that = this;
-                    article.find("h2, p, li, td, .card-header").each(function () {
-                        let text = $(this).text() + "\n";
-                        const nodeName = $(this).prop("nodeName").toLowerCase();
-                        if (nodeName === "h2" || nodeName === "div") {
-                            text = "\n**" + text + "**";
-                        }
-                        if (result.join("").length + text.length > that.maxLength) {
-                            msg.channel.sendMessage(result.join("").replace(/\n\s*\n\s*\n/g, '\n\n'));
-                            result = [];
-                        }
-                        result.push(text);
-                    });
-                    msg.channel.sendMessage(result.join("").replace(/\n\s*\n\s*\n/g, '\n\n'));
+                const penalty = $(".alert-warning").first();
+                if (penalty.length > 0) {
+                    result.push("*" + penalty.text().replace(/\r?\n|\r/g, ' ').trim().replace(" ", ": ") + "*\n");
+                    penalty.remove();
                 }
-            });
+
+                const article = $("article");
+                article.find(".entry-header, .page-navigation, em").remove();
+
+                const that = this;
+                article.find("h2, p, li, td, .card-header").each(function () {
+                    let text = $(this).text() + "\n";
+                    const nodeName = $(this).prop("nodeName").toLowerCase();
+                    if (nodeName === "h2" || nodeName === "div") {
+                        text = "\n**" + text + "**";
+                    }
+                    if (result.join("").length + text.length > that.maxLength) {
+                        msg.channel.sendMessage(result.join("").replace(/\n\s*\n\s*\n/g, '\n\n'));
+                        result = [];
+                    }
+                    result.push(text);
+                });
+                return msg.channel.sendMessage(result.join("").replace(/\n\s*\n\s*\n/g, '\n\n'));
+            }
+        });
     }
 
     handleMessage(command, parameter, msg) {
         if (parameter) {
             let paragraph = parameter.toLocaleLowerCase().trim().split(" ")[0].replace(".", "-");
             if(this.aliases[paragraph]) paragraph = this.aliases[paragraph];
-            this.find(paragraph, msg);
+            return this.find(paragraph, msg);
         } else {
-            msg.channel.sendMessage("**Infraction Procedure Guide**: <" + this.location + ">");
+            return msg.channel.sendMessage("**Infraction Procedure Guide**: <" + this.location + ">");
         }
 
     }

@@ -1,5 +1,6 @@
-const request = require("request");
+const rp = require("request-promise-native");
 const _ = require("lodash");
+const log = require("log4js").getLogger('card');
 
 class MtgCardLoader {
     constructor() {
@@ -45,12 +46,11 @@ class MtgCardLoader {
 
     handleMessage(command, parameter, msg) {
         const cardName = parameter.toLowerCase();
-        request({
+        return rp({
             url: this.cardApi + cardName,
             json: true
-        },
-        (error, response, body) => {
-            if (!error && response.statusCode === 200 && body.cards && body.cards.length) {
+        }).then(body => {
+            if (body.cards && body.cards.length) {
                 const card = this.findCard(cardName, body.cards);
                 let response = this.cardToString(card);
                 let otherCardNames = body.cards.filter(c => c.name !== card.name).map(c => "*" + c.name + "*");
@@ -60,10 +60,19 @@ class MtgCardLoader {
                     response += "\n\n:arrow_right: Other matching cards: :large_blue_diamond:" + otherCardNames.join(" :large_blue_diamond:");
                 }
                 if (card.imageUrl) {
-                    msg.channel.sendFile(card.imageUrl, _.snakeCase(_.deburr(card.name)) + ".jpg", response);
-                } else {
-                    msg.channel.sendMessage(response);
+                    return rp({
+                        url: card.imageUrl,
+                        encoding: null
+                    }).then(
+                        buffer => msg.channel.sendFile(buffer, _.snakeCase(_.deburr(card.name)) + ".jpg", response),
+                        error => {
+                            log.error("Downloading image", card.imageUrl, "failed.", error);
+                            // Couldn't download card image, fall back on message without image.
+                            return msg.channel.sendMessage(response);
+                        }
+                    );
                 }
+                return msg.channel.sendMessage(response);
             }
         });
     }

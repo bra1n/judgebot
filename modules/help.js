@@ -6,7 +6,7 @@ class Help {
             '!ipg': 'Show an entry from the Infraction Procedure Guide, *Example: !ipg 4.2, !ipg grv*',
             '!cr': 'Show an entry from the Comprehensive Rulebook, *Example: !cr 100.6b*',
             '!define': 'Show a definition from the Comprehensive Rulebook, *Example: !define phasing*'
-        }
+        };
     }
 
     getCommands() {
@@ -21,7 +21,7 @@ class Help {
         response += "\nThis judgebot is provided free of charge and can be added to your channel, too!\n";
         response += ":link: https://bots.discord.pw/bots/240537940378386442\n";
         response += ":link: https://github.com/bra1n/judgebot\n";
-        msg.author.sendMessage(response);
+        return msg.author.sendMessage(response);
     }
 }
 module.exports = Help;

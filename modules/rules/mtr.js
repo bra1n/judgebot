@@ -14,10 +14,9 @@ class MTR {
 
     handleMessage(command, parameter, msg) {
         if (parameter) {
-            msg.channel.sendMessage(this.find(parameter));
-        } else {
-            msg.channel.sendMessage('**Magic Tournament Rules**: <' + this.Location + '>');
+            return msg.channel.sendMessage(this.find(parameter));
         }
+        return msg.channel.sendMessage('**Magic Tournament Rules**: <' + this.Location + '>');
     }
 }
 module.exports = MTR;

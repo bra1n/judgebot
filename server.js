@@ -54,7 +54,9 @@ bot.on("message", msg => {
     ];
     log.info(logMessage.join(' '));
     userMessageTimes[msg.author.id] = new Date().getTime();
-    handlers[command].handleMessage(command, parameter, msg);
+    const ret = handlers[command].handleMessage(command, parameter, msg);
+    // if ret is undefined or not a thenable this just returns a resolved promise and the callback won't be called
+    Promise.resolve(ret).catch(e => log.error('An error occured while handling', msg.content.green, ":\n", e));
 });
 
 /* Bot event listeners */

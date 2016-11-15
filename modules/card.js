@@ -1,6 +1,7 @@
 const rp = require("request-promise-native");
 const _ = require("lodash");
 const log = require("log4js").getLogger('card');
+const legalLimitations = ["Vintage","Legacy","Modern","Standard","Commander"];
 
 class MtgCardLoader {
     constructor() {
@@ -27,6 +28,16 @@ class MtgCardLoader {
         }
         if (card.power) {
             cardInfo.push(card.power.replace(/\*/g, '\\*') + "/" + card.toughness.replace(/\*/g, '\\*'));
+        }
+        if (card.legalities){
+            const legalities = _.groupBy(_.filter(card.legalities, legality => {return legalLimitations.includes(legality.format)}),'legality');
+            const legalityText = [];
+            _.forEach(legalities,(formats,legalityType) =>{
+                const typeText = [];
+                formats.forEach(format=>{typeText.push(format.format)});
+                legalityText.push(legalityType+": "+typeText.sort().join(", "));
+            });
+            cardInfo.push(legalityText.join(" || "));
         }
         if (card.printings) {
             cardInfo.push(card.printings.join(", "));

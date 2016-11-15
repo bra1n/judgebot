@@ -3,7 +3,6 @@ const cheerio = require("cheerio");
 class IPG {
     constructor() {
         this.location = "http://blogs.magicjudges.org/rules/ipg";
-        this.maxLength = 2000;
         this.maxPreview = 200;
         this.commands = ["ipg"];
         this.aliases = {

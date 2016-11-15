@@ -4,6 +4,7 @@ class IPG {
     constructor() {
         this.location = "http://blogs.magicjudges.org/rules/ipg";
         this.maxLength = 2000;
+        this.maxPreview = 200;
         this.commands = ["ipg"];
         this.aliases = {
             'definition': '1-1',
@@ -53,15 +54,21 @@ class IPG {
             'stalling': '4-7',
             'cheating': '4-8'
         };
+        this.handlers = {"Definition": "definition",
+            "Philosophy": "philosophy",
+            "Examples": "examples",
+            "Additional Remedy": "remedy",
+            "Upgrade": "upgrade",
+            "Downgrade": "downgrade"};
     }
 
     getCommands() {
         return this.commands;
     }
 
-    find(parameter, msg) {
+    find(parameters, msg) {
         const options = {
-            url: this.location + parameter,
+            url: this.location + parameters[0],
             simple: false,
             resolveWithFullResponse: true
         };
@@ -80,28 +87,55 @@ class IPG {
                 article.find(".entry-header, .page-navigation, em").remove();
 
                 const that = this;
-                article.find("h2, p, li, td, .card-header").each(function () {
-                    let text = $(this).text() + "\n";
-                    const nodeName = $(this).prop("nodeName").toLowerCase();
-                    if (nodeName === "h2" || nodeName === "div") {
-                        text = "\n**" + text + "**";
-                    }
-                    if (result.join("").length + text.length > that.maxLength) {
-                        msg.channel.sendMessage(result.join("").replace(/\n\s*\n\s*\n/g, '\n\n'));
-                        result = [];
-                    }
-                    result.push(text);
-                });
-                return msg.channel.sendMessage(result.join("").replace(/\n\s*\n\s*\n/g, '\n\n'));
+                if(parameters.length === 1){
+                    article.find("td").each((index,element)=>{
+                        result.push($(element).text()+"\n");
+                    });
+                    article.find("h2, p, li, .card-header").each((index,element)=>{
+                        let text = $(element).text()+"\n";
+                        const nodeName = $(element).prop("nodeName").toLowerCase();
+                        if(nodeName==="h2" || nodeName==="div"){
+                            text = "\n**"+text+"**";
+                        }
+                        result.push(text);
+                        if(result.join("").length>that.maxPreview){
+                            return false;
+                        }
+                    });
+                }else{
+                    const topics = parameters.slice(1,parameters.length);
+                    let writeToggle = false;
+                    article.find("h2, p, li, .card-header").each((index,element) => {
+                        let text = $(element).text();
+                        const nodeName = $(element).prop("nodeName").toLowerCase();
+                        if(nodeName==="h2" || nodeName==="div"){
+                            if(topics.includes(this.handlers[text.trim()])) {
+                                writeToggle = true;
+                                text = "\n**"+text+"\n**";
+                            }else{
+                                writeToggle = false;
+                                return;
+                            }
+                        }else{
+                            text = text +"\n";
+                        }
+                        if(!writeToggle){
+                            return;
+                        }
+                        result.push(text);
+                    });
+                }
+                return msg.channel.sendMessage(result.join("").replace(/\n\s*\n\s*\n/g, '\n\n'),{"split":"true"});
             }
         });
     }
 
     handleMessage(command, parameter, msg) {
         if (parameter) {
-            let paragraph = parameter.toLocaleLowerCase().trim().split(" ")[0].replace(".", "-");
-            if(this.aliases[paragraph]) paragraph = this.aliases[paragraph];
-            return this.find(paragraph, msg);
+            let parameters = parameter.trim().toLowerCase().split(" ");
+            parameters[0] = parameters[0].replace(".", "-");
+            if(this.aliases[parameters[0]]) parameters[0] = this.aliases[parameters[0]];
+            return this.find(parameters, msg);
         } else {
             return msg.channel.sendMessage("**Infraction Procedure Guide**: <" + this.location + ">");
         }

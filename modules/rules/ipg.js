@@ -92,15 +92,15 @@ class IPG {
                         result.push($(element).text()+"\n");
                     });
                     article.find("h2, p, li, .card-header").each((index,element)=>{
-                        let text = $(element).text()+"\n";
+                        let text = $(element).text();
                         const nodeName = $(element).prop("nodeName").toLowerCase();
-                        if(nodeName==="h2" || nodeName==="div"){
-                            text = "\n**"+text+"**";
-                            foundTopics.push(text.trim());
+                        if(this.handlers[text.trim()]){
+                            foundTopics.push(text);
+                            text = "\n**" + text + "**";
                         }
-                        result.push(text);
-                        if(result.join("").length>that.maxPreview){
-                            return false;
+
+                        if(result.join("").length<that.maxPreview){
+                            result.push(text+"\n");
                         }
                     });
                 }else{
@@ -109,14 +109,10 @@ class IPG {
                     article.find("h2, p, li, .card-header").each((index,element) => {
                         let text = $(element).text();
                         const nodeName = $(element).prop("nodeName").toLowerCase();
-                        if(nodeName==="h2" || nodeName==="div"){
-                            if(topics.includes(this.handlers[text.trim()])) {
-                                writeToggle = true;
-                                text = "\n**"+text+"\n**";
-                            }else{
-                                writeToggle = false;
-                            }
-                            foundTopics.push(text.trim());
+                        if(this.handlers[text.trim()]){
+                            writeToggle = topics.includes(this.handlers[text.trim()]);
+                            foundTopics.push(text);
+                            text = "\n**" + text + "**\n";
                         }else{
                             text = text +"\n";
                         }
@@ -126,7 +122,7 @@ class IPG {
                         result.push(text);
                     });
                 }
-                result.push("\nAvailable topics: "+foundTopics.join(" - ")+"\n");
+                result.push("\n**Available topics:** *"+foundTopics.join("*, *")+"*\n");
                 return msg.channel.sendMessage(result.join("").replace(/\n\s*\n\s*\n/g, '\n\n'),{"split":"true"});
             }
         });

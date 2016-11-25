@@ -59,6 +59,7 @@ class IPG {
             "Additional Remedy": "remedy",
             "Upgrade": "upgrade",
             "Downgrade": "downgrade"};
+        this.maxTopics = 1;
     }
 
     getCommands() {
@@ -102,7 +103,8 @@ class IPG {
                         }
                     });
                 }else{
-                    const topics = parameters.slice(1,parameters.length);
+                    const topics = parameters.slice(1,this.maxTopics+1);
+                    const foundTopics = [];
                     let writeToggle = false;
                     article.find("h2, p, li, .card-header").each((index,element) => {
                         let text = $(element).text();
@@ -113,8 +115,8 @@ class IPG {
                                 text = "\n**"+text+"\n**";
                             }else{
                                 writeToggle = false;
-                                return;
                             }
+                            foundTopics.push(text.trim());
                         }else{
                             text = text +"\n";
                         }
@@ -123,6 +125,7 @@ class IPG {
                         }
                         result.push(text);
                     });
+                    result.push("\nAvailable topics: "+foundTopics.join(" - ")+"\n");
                 }
                 return msg.channel.sendMessage(result.join("").replace(/\n\s*\n\s*\n/g, '\n\n'),{"split":"true"});
             }

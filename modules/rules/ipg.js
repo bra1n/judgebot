@@ -85,8 +85,8 @@ class IPG {
 
                 const article = $("article");
                 article.find(".entry-header, .page-navigation, em").remove();
-
                 const that = this;
+                const foundTopics = [];
                 if(parameters.length === 1){
                     article.find("td").each((index,element)=>{
                         result.push($(element).text()+"\n");
@@ -96,6 +96,7 @@ class IPG {
                         const nodeName = $(element).prop("nodeName").toLowerCase();
                         if(nodeName==="h2" || nodeName==="div"){
                             text = "\n**"+text+"**";
+                            foundTopics.push(text.trim());
                         }
                         result.push(text);
                         if(result.join("").length>that.maxPreview){
@@ -104,7 +105,6 @@ class IPG {
                     });
                 }else{
                     const topics = parameters.slice(1,this.maxTopics+1);
-                    const foundTopics = [];
                     let writeToggle = false;
                     article.find("h2, p, li, .card-header").each((index,element) => {
                         let text = $(element).text();
@@ -125,8 +125,8 @@ class IPG {
                         }
                         result.push(text);
                     });
-                    result.push("\nAvailable topics: "+foundTopics.join(" - ")+"\n");
                 }
+                result.push("\nAvailable topics: "+foundTopics.join(" - ")+"\n");
                 return msg.channel.sendMessage(result.join("").replace(/\n\s*\n\s*\n/g, '\n\n'),{"split":"true"});
             }
         });

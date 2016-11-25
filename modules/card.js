@@ -1,13 +1,13 @@
 const rp = require("request-promise-native");
 const _ = require("lodash");
 const log = require("log4js").getLogger('card');
-const legalLimitations = ["Vintage","Legacy","Modern","Standard","Commander"];
 
 class MtgCardLoader {
     constructor() {
         this.cardApi = "https://api.magicthegathering.io/v1/cards?name=";
         this.commands = ["card"];
         this.maxLength = 2000;
+        this.legalLimitations = ["Vintage","Legacy","Modern","Standard","Commander"];
     }
 
     getCommands() {
@@ -30,14 +30,11 @@ class MtgCardLoader {
             cardInfo.push(card.power.replace(/\*/g, '\\*') + "/" + card.toughness.replace(/\*/g, '\\*'));
         }
         if (card.legalities){
-            const legalities = _.groupBy(_.filter(card.legalities, legality => {return legalLimitations.includes(legality.format)}),'legality');
-            const legalityText = [];
-            _.forEach(legalities,(formats,legalityType) =>{
-                const typeText = [];
-                formats.forEach(format=>{typeText.push(format.format)});
-                legalityText.push(legalityType+": "+typeText.sort().join(", "));
+            const legalities = [];
+            card.legalities.filter(elem => this.legalLimitations.includes(elem.format)).forEach(elem => {
+                legalities.push(elem.format + (elem.legality != 'Legal' ? ` (${elem.legality})`:''));
             });
-            cardInfo.push(legalityText.join(" || "));
+            cardInfo.push('Formats: ' + legalities.join(", "));
         }
         if (card.printings) {
             cardInfo.push(card.printings.join(", "));

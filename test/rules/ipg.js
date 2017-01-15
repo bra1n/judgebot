@@ -190,7 +190,7 @@ describe('IPG', function () {
                 title: "1.1 A Section",
                 text: "Text contained in the section",
                 subsections: ["definition", "philosophy", "additional-remedy"],
-                subsectionContents: {definition: {title: "Definition", text: "The content of the definition"}}
+                subsectionContents: {definition: {title: "Definition", text: ["The content of the definition"]}}
             };
             subsectionEntry = sectionEntry.subsectionContents.definition;
             formatted = ipg.formatSubsectionEntry(sectionEntry, subsectionEntry);

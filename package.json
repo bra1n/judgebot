@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha --recursive test"
   },
   "repository": {
     "type": "git",
@@ -27,5 +27,9 @@
     "log4js": "^1.0.0",
     "request": "^2.76.0",
     "request-promise-native": "^1.0.3"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^3.2.0"
   }
 }

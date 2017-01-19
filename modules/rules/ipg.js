@@ -3,10 +3,11 @@ const cheerio = require("cheerio");
 const _ = require("lodash");
 const log = require("log4js").getLogger('ipg');
 
+const IPG_ADDRESS = process.env.IPG_ADDRESS || "https://sites.google.com/site/mtgfamiliar/rules/InfractionProcedureGuide-light.html";
+
 class IPG {
-    constructor(initialize) {
-        this.location = "https://sites.google.com/site/mtgfamiliar/rules/InfractionProcedureGuide-light.html";
-        this.linkableLocation = "http://blogs.magicjudges.org/rules/ipg/";
+    constructor(initialize = true) {
+        this.location = "http://blogs.magicjudges.org/rules/ipg/";
         this.maxPreview = 200;
         this.commands = ["ipg"];
         this.ipgData = {};
@@ -59,23 +60,23 @@ class IPG {
             'cheating': '4.8'
         };
         if (initialize) {
-            this.init();
+            rp({url: IPG_ADDRESS, simple: false, resolveWithFullResponse: true }).then(response => {
+                if (response.statusCode === 200) {
+                    this.init(response.body);
+                } else {
+                    log.error("Error loading IPG, server returned status code " + response.statusCode);
+                }
+            }).catch(e => log.error("Error loading IPG: " + e, e));
         }
     }
 
-    init() {
-        return rp({url: this.location, simple: false, resolveWithFullResponse: true }).then(response => {
-            if (response.statusCode === 200) {
-                const $ = cheerio.load(response.body);
-                this.cleanup($);
-                this.handleChapters($);
-                this.handleSections($);
-                this.handleSubsections($);
-                log.info("IPG Ready");
-            } else {
-                log.error("Error loading IPG, server returned status code " + response.statusCode);
-            }
-        }).catch(e => log.error("Error loading IPG: " + e, e));
+    init(ipgHtml) {
+        const $ = cheerio.load(ipgHtml);
+        this.cleanup($);
+        this.handleChapters($);
+        this.handleSections($);
+        this.handleSubsections($);
+        log.info("IPG Ready");
     }
 
     cleanup($) {
@@ -259,7 +260,7 @@ ${subsectionEntry.text.join("\n\n")}
             const result = this.find(this.handleParameters(parameter));
             return msg.channel.sendMessage(result, {split: true});
         } else {
-            return msg.channel.sendMessage("**Infraction Procedure Guide**: <" + this.linkableLocation + ">");
+            return msg.channel.sendMessage("**Infraction Procedure Guide**: <" + this.location + ">");
         }
     }
 }

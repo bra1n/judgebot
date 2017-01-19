@@ -18,7 +18,7 @@ const modules = [
 const bot = new Discord.Client();
 const handlers = {};
 modules.forEach(module => {
-    const moduleObject = new (require("./modules/" + module + '.js'))(true);
+    const moduleObject = new (require("./modules/" + module + '.js'))();
     if(moduleObject) {
         log.info("Successfully initialized module", module.green);
         moduleObject.getCommands().forEach(command => {

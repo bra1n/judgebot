@@ -1,14 +1,15 @@
 /* eslint-env mocha */
-const IPG = require("../../modules/rules/ipg");
+const IPG = require('../../modules/rules/ipg');
 const chai = require('chai');
-const cheerio = require("cheerio");
+const cheerio = require('cheerio');
+const fs = require('fs');
 
 const expect = chai.expect;
 
 describe('IPG', function () {
     let ipg;
     before(function () {
-        ipg = new IPG();
+        ipg = new IPG(false);
     });
 
     describe("#cleanup", function () {
@@ -115,7 +116,7 @@ describe('IPG', function () {
         let ipg;
 
         before(function () {
-            ipg = new IPG();
+            ipg = new IPG(false);
             chapterEntry = {
                 title: "1 A Chapter",
                 text: "Text contained in the chapter",
@@ -147,7 +148,7 @@ describe('IPG', function () {
         let ipg;
 
         beforeEach(function () {
-            ipg = new IPG();
+            ipg = new IPG(false);
             sectionEntry = {
                 title: "1.1 A Section",
                 penalty: "Disqualification",
@@ -185,7 +186,7 @@ describe('IPG', function () {
         let ipg;
 
         beforeEach(function () {
-            ipg = new IPG();
+            ipg = new IPG(false);
             sectionEntry = {
                 title: "1.1 A Section",
                 text: "Text contained in the section",
@@ -211,11 +212,11 @@ describe('IPG', function () {
 
     describe("tests based on real data", function() {
         let ipg;
-        this.timeout(10000);
 
         before(function () {
-            ipg = new IPG();
-            return ipg.init();
+            this.timeout = 5000;
+            ipg = new IPG(false);
+            ipg.init(fs.readFileSync(`${__dirname}/ipg.html`, 'utf8'));
         });
         it("should have downloaded and parsed the ipg", function () {
             expect(ipg.ipgData).to.contain.keys(["1", "2", "3", "4"]);

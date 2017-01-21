@@ -193,29 +193,31 @@ class IPG {
     formatChapterEntry(entry) {
         const text = entry.text || this.formatPreview(this.ipgData[entry.sections[0]]);
 
-        return `**IPG ${entry.title}**
-${text}
-
-**Available Sections**: ${this.formatSections(entry.sections)}`;
+        return [
+            `**IPG ${entry.title}**`,
+            text,
+            `\n**Available Sections**: ${this.formatSections(entry.sections)}`
+        ].join('\n');
     }
 
     formatSectionEntry(entry) {
         const penalty = entry.penalty ? `\nPenalty: ${entry.penalty}\n` : '';
         const text = entry.text || this.formatPreview(entry.subsectionContents[entry.subsections[0]]);
-        return `**IPG ${entry.title}**${penalty}
-${text}
-
-**Available Subsections**: ${this.formatSections(entry.subsections)}`;
+        return [
+            `**IPG ${entry.title}**${penalty}`,
+            text,
+            `\n**Available Subsections**: ${this.formatSections(entry.subsections)}`
+        ].join('\n')
     }
 
     formatSubsectionEntry(sectionEntry, subsectionEntry) {
         const otherSections = sectionEntry.subsections.filter(s => s !== _.kebabCase(subsectionEntry.title));
 
-        return `**IPG ${sectionEntry.title} - ${subsectionEntry.title}**
-
-${subsectionEntry.text.join("\n\n")}
-
-**Other available subsections**: ${this.formatSections(otherSections)}`;
+        return [
+            `**IPG ${sectionEntry.title} - ${subsectionEntry.title}**`,
+            subsectionEntry.text.join("\n\n"),
+            `**Other available subsections**: ${this.formatSections(otherSections)}`
+        ].join('\n\n');
     }
 
     find(parameters) {
@@ -223,9 +225,10 @@ ${subsectionEntry.text.join("\n\n")}
         if (!entry) {
             let availableEntries = _.keys(this.ipgData);
             availableEntries.sort();
-            return `These parameters don't match any entries in the IPG.
-
-**Available entries**: ${this.formatSections(availableEntries)}`;
+            return [
+                'These parameters don\'t match any entries in the IPG.',
+                `**Available entries**: ${this.formatSections(availableEntries)}`
+            ].join('\n\n');
         }
 
         if(parameters.length === 1) {
@@ -241,9 +244,10 @@ ${subsectionEntry.text.join("\n\n")}
             const subsectionEntry = entry.subsectionContents[parameters[1]];
             if (!subsectionEntry) {
                 const availableSubsections = this.formatSections(entry.subsections);
-                return `The section ${entry.title} does not have a subsection with that name.
-
-**Available Subsections**: ${availableSubsections}`;
+                return [
+                    `The section ${entry.title} does not have a subsection with that name.`,
+                    `**Available Subsections**: ${availableSubsections}`
+                ].join('\n\n')
             }
             return this.formatSubsectionEntry(entry, subsectionEntry);
         }

@@ -5,6 +5,8 @@ engines:
     config:
       languages:
       - javascript
+    exclude_paths:
+      - test/
   eslint:
     enabled: true
   fixme:

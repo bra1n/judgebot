@@ -12,6 +12,7 @@ Clone the Git repository and run the following commands:
 npm install
 export DISCORD_TOKEN="<your Discord bot token>"
 export CR_ADDRESS="http://media.wizards.com/2016/docs/MagicCompRules_20160930.txt"
+export IPG_ADDRESS="https://sites.google.com/site/mtgfamiliar/rules/MagicTournamentRules-light.html"
 node server.js
 ```
 
@@ -20,7 +21,7 @@ node server.js
 - **!card \<partial cardname\>**: searches for an (English) card by name and outputs the card together with an image, if available, *Example: !card Tarmogoyf*
 - **!cr \<paragraph number\>**: shows the chosen paragraph from the [Comprehensive Rules](https://rules.wizards.com/rulebook.aspx?game=Magic&category=Game+Rules), *Example: !cr 100.6b*
 - **!define \<keyword\>**: shows the chosen keyword definition from the [Comprehensive Rules](https://rules.wizards.com/rulebook.aspx?game=Magic&category=Game+Rules), *Example: !define banding*
-- **!ipg \<paragraph number\>**: shows the chosen paragraph from the [Infraction Procedure Guide](http://blogs.magicjudges.org/rules/ipg/), *Example: !ipg 2.1, !ipg hce*
+- **!ipg \<paragraph number\>**: shows the chosen (sub-)section from the [Infraction Procedure Guide](http://blogs.magicjudges.org/rules/ipg/), *Example: !ipg 2.1, !ipg hce philosophy*
 - **!help**: show a list of available commands (in a direct message)
 
 ## Coming soon

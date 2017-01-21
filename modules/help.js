@@ -3,7 +3,7 @@ class Help {
         this.commands = ["help"];
         this.commandList = {
             '!card': 'Search for an English Magic card by (partial) name, *Example: !card iona*',
-            '!ipg': 'Show an entry from the Infraction Procedure Guide, *Example: !ipg 4.2, !ipg grv*',
+            '!ipg': 'Show an entry from the Infraction Procedure Guide, *Example: !ipg 4.2, !ipg grv philosophy*',
             '!cr': 'Show an entry from the Comprehensive Rulebook, *Example: !cr 100.6b*',
             '!define': 'Show a definition from the Comprehensive Rulebook, *Example: !define phasing*'
         };

@@ -214,7 +214,7 @@ describe('IPG', function () {
         let ipg;
 
         before(function () {
-            this.timeout = 5000;
+            this.timeout(5000);
             ipg = new IPG(false);
             ipg.init(fs.readFileSync(`${__dirname}/ipg.html`, 'utf8'));
         });

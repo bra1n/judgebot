@@ -4,7 +4,7 @@ const rp = require('request-promise-native');
 const Table = require('tty-table');
 const log = require('log4js').getLogger('mtr');
 
-const IPG_ADDRESS = process.env.IPG_ADDRESS || 'https://sites.google.com/site/mtgfamiliar/rules/MagicTournamentRules-light.html';
+const MTR_ADDRESS = process.env.MTR_ADDRESS || 'https://sites.google.com/site/mtgfamiliar/rules/MagicTournamentRules-light.html';
 
 class MTR {
     constructor(initialize = true) {
@@ -17,7 +17,7 @@ class MTR {
         };
 
         if (initialize) {
-            this.download(IPG_ADDRESS).then(mtrDocument => this.init(mtrDocument));
+            this.download(MTR_ADDRESS).then(mtrDocument => this.init(mtrDocument));
         }
     }
 

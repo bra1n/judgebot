@@ -9,10 +9,10 @@ const MTR_ADDRESS = process.env.MTR_ADDRESS || 'https://sites.google.com/site/mt
 class MTR {
     constructor(initialize = true) {
         this.location = 'http://blogs.magicjudges.org/rules/mtr';
-        this.maxLength = 1950;
+        this.maxLength = 1500;
         this.commands = ['mtr'];
         this.mtrData = {
-            chapters: {appendices: {title: 'Appendices', sections: []}},
+            chapters: {appendices: {key: 'appendices', title: 'Appendices', sections: []}},
             sections: {}
         };
 
@@ -64,6 +64,7 @@ class MTR {
             const title = $(e).text().trim();
             const number = title.split('.', 1)[0];
             this.mtrData.chapters[number] = {
+                key: number,
                 title: title,
                 sections: []
             };
@@ -79,6 +80,7 @@ class MTR {
             const content = this.handleSectionContent($, $(e), title, key);
 
             this.mtrData.sections[key] = {
+                key: key,
                 title: title,
                 content: content
             };
@@ -94,7 +96,7 @@ class MTR {
         if (/Format Deck Construction$/.test(title)) {
             // Asking a bot for the banlist has to be one of the worst ways to inquire about card legality that I can imagine,
             // defer handling this until I'm really bored and redirect people to the annotated mtr in the meantime
-            return `You can find the full text of ${title} on <${this.location}${number.replace('.', '-')}>`;
+            return `You can find the full text of ${title} on <${this.generateLink(number)}>`;
         }
 
         // there are some headers which are neiter section nor chapter headers interspersed in the secions
@@ -117,6 +119,14 @@ class MTR {
         return  textTable.split('\n').filter(l => !/^\s*$/.test(l)).map(l => '`' + l + '`').join('\n');
     }
 
+    generateLink(key) {
+        if (/^\d/.test(key)) {
+            return this.location + key.replace('.', '-');
+        } else {
+            return this.location + '-' + key;
+        }
+    }
+
     formatChapter(chapter) {
         const availableSections = chapter.sections.map(s => `*${_.truncate(this.mtrData.sections[s].title)}* (${s})`).join(', ');
         return [
@@ -126,10 +136,16 @@ class MTR {
     }
 
     formatSection(section) {
-        return [
-            `MTR - **${section.title}**`,
+        const sectionContent = [
+            `**MTR - ${section.title}**`,
             section.content
         ].join('\n\n');
+        if (sectionContent.length <= this.maxLength) {
+            return sectionContent;
+        }
+        // truncate long sections and provide a link to the full text
+        const sectionURL = `\n\u2026\n\nSee <${this.generateLink(section.key)}> for full text.`
+        return _.truncate(sectionContent, {length: this.maxLength, separator: '\n', omission: sectionURL  });
     }
 
     getCommands() {

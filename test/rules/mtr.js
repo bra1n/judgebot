@@ -96,6 +96,17 @@ describe('MTR', function () {
         });
     });
     describe('output', function () {
+        describe('#generateLink', function () {
+            const rulesBlogMTR = 'http://blogs.magicjudges.org/rules/mtr'
+            it('should work for sections', function () {
+                const result = mtr.generateLink('3.5');
+                expect(result).to.equal(rulesBlogMTR + '3-5');
+            });
+            it('should work for appendices', function () {
+                const result = mtr.generateLink('appendix-c');
+                expect(result).to.equal(rulesBlogMTR + '-appendix-c');
+            });
+        });
         describe('#formatChapter', function () {
             let chapter;
             before(function () {
@@ -111,15 +122,24 @@ describe('MTR', function () {
         });
         describe('#formatSection', function () {
             let section;
-            before(function () {
-                section = mtr.formatSection({title: '1.1 A Section', content: 'The section\'s content'});
+            let sectionText;
+            beforeEach(function () {
+                section = {title: '1.1 A Section', content: 'The section\'s content', key: '1.1'};
+                sectionText = mtr.formatSection(section);
             });
             it('should contain the title', function () {
-                expect(section).to.contain('1.1 A Section');
+                expect(sectionText).to.contain('1.1 A Section');
             });
             it('should contain the content', function () {
-                expect(section).to.contain('1.1 A Section');
-            })
+                expect(sectionText).to.contain('1.1 A Section');
+            });
+            it('should truncate long section texts and display a link', function () {
+                section.content = _.repeat("123456789\n", 250);
+                sectionText = mtr.formatSection(section);
+                expect(sectionText).to.have.length.of.at.most(1500);
+                expect(sectionText).to.contain('\u2026');
+                expect(sectionText).to.contain('http://blogs.magicjudges.org/rules/mtr1-1');
+            });
         });
     });
      describe('tests based on real data', function() {
@@ -145,7 +165,7 @@ describe('MTR', function () {
                 expect(mtr.find('4.4')).to.contain('Players are expected to remember their own triggered abilities');
             });
             it('should work for appendix queries', function () {
-                expect(mtr.find('appendix-b')).to.contain('Two-Headed Giant Draft Timing')
+                expect(mtr.find('appendix-b')).to.contain('Time Limits')
             });
             
             it('should give an error on unknown chapters', function() {
@@ -153,12 +173,6 @@ describe('MTR', function () {
             });
              it('should give an error on unknown chapters', function() {
                 expect(mtr.find('8.7')).to.contain('not exist').and.to.contain('available sections');
-            });
-            it('should show text and tables for appendix b', function () {
-                expect(mtr.find('appendix-b')).to
-                    .contain('The required minimum time limit for any match is 40 minutes.')
-                    .contain('Cards remaining in pack')
-                    .contain('50 seconds');
             });
         });
      });

@@ -1,5 +1,4 @@
 const request = require("request");
-const iconv = require("iconv-lite");
 const log = require("log4js").getLogger('cr');
 
 // Using the current CR as the default, not sure if they actually stick around once new ones are published

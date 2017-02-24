@@ -12,7 +12,7 @@ Clone the Git repository and run the following commands:
 npm install
 export DISCORD_TOKEN="<your Discord bot token>"
 export CR_ADDRESS="http://media.wizards.com/2016/docs/MagicCompRules_20160930.txt"
-export IPG_ADDRESS=https://sites.google.com/site/mtgfamiliar/rules/InfractionProcedureGuide-light.html"
+export IPG_ADDRESS="https://sites.google.com/site/mtgfamiliar/rules/InfractionProcedureGuide-light.html"
 export MTR_ADDRESS="https://sites.google.com/site/mtgfamiliar/rules/MagicTournamentRules-light.html"
 node server.js
 ```

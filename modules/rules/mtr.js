@@ -14,6 +14,7 @@ class MTR {
         this.commands = ['mtr'];
         this.thumbnail = 'https://assets.magicjudges.org/judge-banner/images/magic-judge.png';
         this.mtrData = {
+            description: '',
             chapters: {appendices: {key: 'appendices', title: 'Appendices', sections: []}},
             sections: {}
         };
@@ -42,6 +43,9 @@ class MTR {
     }
 
     cleanup($) {
+        // get description from body
+        this.mtrData.description = $('body').get(0).childNodes[4].data.trim();
+
         // wrap standalone text nodes in p tags
         const nodes = $('body').contents();
         for (let i = 0; i < nodes.length; i++) {
@@ -183,7 +187,12 @@ class MTR {
             const embed = this.find(parameter.trim());
             return msg.channel.send('', {embed});
         }
-        return msg.channel.send('**Magic Tournament Rules**: <' + this.location + '>');
+        return msg.channel.send('', {embed: new Discord.RichEmbed({
+            title: 'Magic: The Gathering Tournament Rules',
+            description: this.mtrData.description,
+            thumbnail: {url: this.thumbnail},
+            url: this.location
+        })});
     }
 }
 

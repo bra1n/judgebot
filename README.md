@@ -19,7 +19,10 @@ node server.js
 
 ## Supported commands
 
-- **!card \<partial cardname\>**: searches for an (English) card by name and outputs the card together with an image, if available, *Example: !card Tarmogoyf*
+- **!card \<partial cardname\>**: searches for an (English) card by name and outputs the card together with an image, if available, supports the full [Scryfall syntax](https://scryfall.com/docs/reference), *Example: !card Tarmogoyf*
+- **!price \<partial cardname\>**: searches for an (English) card by name and outputs the card together with prices in USD, EUR and TIX, *Example: !price Tarmogoyf*
+- **!legal \<partial cardname\>**: searches for an (English) card by name and outputs the card together with a list of formats where it is legal, *Example: !legal Tarmogoyf*
+- **!ruling \<partial cardname\>**: searches for an (English) card by name and outputs the Gatherer rulings for that card, *Example: !ruling Tarmogoyf*
 - **!cr \<paragraph number\>**: shows the chosen paragraph from the [Comprehensive Rules](https://rules.wizards.com/rulebook.aspx?game=Magic&category=Game+Rules), *Example: !cr 100.6b*
 - **!define \<keyword\>**: shows the chosen keyword definition from the [Comprehensive Rules](https://rules.wizards.com/rulebook.aspx?game=Magic&category=Game+Rules), *Example: !define banding*
 - **!ipg \<paragraph number\>**: shows the chosen (sub-)section from the [Infraction Procedure Guide](http://blogs.magicjudges.org/rules/ipg/), *Example: !ipg 2.1, !ipg hce philosophy*

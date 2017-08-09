@@ -2,7 +2,10 @@ class Help {
     constructor() {
         this.commands = ["help"];
         this.commandList = {
-            '!card': 'Search for an English Magic card by (partial) name, *Example: !card iona*',
+            '!card': 'Search for an English Magic card by (partial) name, supports full Scryfall syntax, *Example: !card iona*',
+            '!price': 'Show the price in USD, EUR and TIX for a card, *Example: !price iona*',
+            '!legal': 'Show the format legality for a card, *Example: !legal iona*',
+            '!ruling': 'Show the Gatherer rulings for a card, *Example: !ruling iona*',
             '!ipg': 'Show an entry from the Infraction Procedure Guide, *Example: !ipg 4.2, !ipg grv philosophy*',
             '!mtr': 'Show an entry from Magic: The Gathering Tournament Rules, *Example: !mtr 2, !mtr 4.2*',
             '!cr': 'Show an entry from the Comprehensive Rulebook, *Example: !cr 100.6b*',

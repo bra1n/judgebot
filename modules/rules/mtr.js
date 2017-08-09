@@ -3,14 +3,16 @@ const cheerio = require('cheerio');
 const rp = require('request-promise-native');
 const Table = require('tty-table');
 const log = require('log4js').getLogger('mtr');
+const Discord = require('discord.js');
 
 const MTR_ADDRESS = process.env.MTR_ADDRESS || 'https://sites.google.com/site/mtgfamiliar/rules/MagicTournamentRules-light.html';
 
 class MTR {
     constructor(initialize = true) {
         this.location = 'http://blogs.magicjudges.org/rules/mtr';
-        this.maxLength = 1500;
+        this.maxLength = 2040;
         this.commands = ['mtr'];
+        this.thumbnail = 'https://assets.magicjudges.org/judge-banner/images/magic-judge.png';
         this.mtrData = {
             chapters: {appendices: {key: 'appendices', title: 'Appendices', sections: []}},
             sections: {}
@@ -99,7 +101,7 @@ class MTR {
             return `You can find the full text of ${title} on <${this.generateLink(number)}>`;
         }
 
-        // there are some headers which are neiter section nor chapter headers interspersed in the secions
+        // there are some headers which are neither section nor chapter headers interspersed in the sections
         const sectionContent = sectionHeader.nextUntil('.section-header,.chapter-header').wrap('<div></div>').parent();
         sectionContent.find('h4').replaceWith((i, e) => `<p>\n\n**${$(e).text().trim()}**\n\n</p>`);
 
@@ -109,7 +111,7 @@ class MTR {
             return `<p>\n${tableString}\n</p>`;
         });
         // mark each line as a Codeblock (uses monospace font), otherwise message splitting will mess up the formatting
-        return sectionContent.text().trim().replace(/\n\s+\n/, '\n\n');
+        return sectionContent.text().trim().replace(/\n\s*\n/g, '#break#').replace(/\n/g,'').replace(/#break#/g,'\n\n');
     }
 
     generateTextTable($, table) {
@@ -128,24 +130,22 @@ class MTR {
     }
 
     formatChapter(chapter) {
-        const availableSections = chapter.sections.map(s => `*${_.truncate(this.mtrData.sections[s].title)}* (${s})`).join(', ');
-        return [
-            `**MTR - ${chapter.title}**`,
-            `**Available Sections**: ${availableSections}`
-        ].join('\n\n');
+        const availableSections = chapter.sections.map(s => this.mtrData.sections[s].title).join('\n');
+        return new Discord.RichEmbed({
+            title: `MTR - ${chapter.title}`,
+            description: availableSections,
+            thumbnail: {url: this.thumbnail},
+            url: 'https://blogs.magicjudges.org/rules/mtr/#'+chapter.title.toLowerCase().replace(/ +/g,'-')
+        });
     }
 
     formatSection(section) {
-        const sectionContent = [
-            `**MTR - ${section.title}**`,
-            section.content
-        ].join('\n\n');
-        if (sectionContent.length <= this.maxLength) {
-            return sectionContent;
-        }
-        // truncate long sections and provide a link to the full text
-        const sectionURL = `\n\u2026\n\nSee <${this.generateLink(section.key)}> for full text.`
-        return _.truncate(sectionContent, {length: this.maxLength, separator: '\n', omission: sectionURL  });
+        return new Discord.RichEmbed({
+            title: `MTR - ${section.title}`,
+            description: _.truncate(section.content, {length: this.maxLength, separator: '\n'}),
+            thumbnail: {url: this.thumbnail},
+            url: this.generateLink(section.key)
+        });
     }
 
     getCommands() {
@@ -159,23 +159,31 @@ class MTR {
             if (section) {
                 return this.formatSection(section);
             }
-            return 'This section does not exist. Try asking for a chapter to get a list of available sections for that chapter.';
+            return new Discord.RichEmbed({
+                title: 'MTR - Error',
+                description: 'This section does not exist. Try asking for a chapter to get a list of available sections for that chapter.',
+                color: 0xff0000,
+            });
         }
 
         const chapter =  this.mtrData.chapters[parameter];
         if (chapter) {
             return this.formatChapter(chapter);
         }
-        const availableChapters = _.values(this.mtrData.chapters).map(c => `*${c.title}*`).join(', ');
-        return `This chapter does not exist.\n**Available Chapters**: ${availableChapters}`;
+        const availableChapters = _.values(this.mtrData.chapters).map(c => c.title).join('\n');
+        return new Discord.RichEmbed({
+            title: 'MTR - Error',
+            description: 'This chapter does not exist.',
+            color: 0xff0000,
+        }).addField('Available Chapters', availableChapters);
     }
 
     handleMessage(command, parameter, msg) {
         if (parameter) {
-            const result = this.find(parameter.trim());
-            return msg.channel.sendMessage(result, {split: true});
+            const embed = this.find(parameter.trim());
+            return msg.channel.send('', {embed});
         }
-        return msg.channel.sendMessage('**Magic Tournament Rules**: <' + this.location + '>');
+        return msg.channel.send('**Magic Tournament Rules**: <' + this.location + '>');
     }
 }
 

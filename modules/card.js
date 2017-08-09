@@ -1,93 +1,235 @@
 const rp = require("request-promise-native");
 const _ = require("lodash");
+const Discord = require("discord.js");
 const log = require("log4js").getLogger('card');
+const cheerio = require("cheerio");
 
 class MtgCardLoader {
     constructor() {
-        this.cardApi = "https://api.magicthegathering.io/v1/cards?name=";
-        this.commands = ["card"];
-        this.maxLength = 2000;
-        this.legalLimitations = ["Vintage","Legacy","Modern","Standard","Commander"];
+        this.commands = ["card", "price", "rulings", "ruling", "legal"];
+        this.cardApi = "https://api.scryfall.com/cards/search?q=";
+        this.manamojis = {
+            "0":"344491158384410625",
+            "1":"344491158723887107",
+            "10":"344491160280104984",
+            "11":"344491159965401088",
+            "12":"344491160435163137",
+            "13":"344491160674238464",
+            "14":"344491160619712513",
+            "15":"344491160586289154",
+            "16":"344491160808587264",
+            "17":"344491160468979714",
+            "18":"344491160720506880",
+            "19":"344491160498208771",
+            "2":"344491158371696641",
+            "20":"344491161257246720",
+            "2b":"344491158665429012",
+            "2g":"344491159189585921",
+            "2r":"344491159265083392",
+            "2u":"344491159160225792",
+            "2w":"344491159692771328",
+            "3":"344491159210688522",
+            "4":"344491159172677632",
+            "5":"344491158883532801",
+            "6":"344491159185260554",
+            "7":"344491159021813761",
+            "8":"344491159424466945",
+            "9":"344491159273472020",
+            "b":"344491161437732864",
+            "bg":"344491161286737921",
+            "bp":"344491161466961920",
+            "br":"344491161362366465",
+            "c":"344491160636489739",
+            "chaos":"344491160267653130",
+            "e":"344491160829558794",
+            "g":"344491161169428481",
+            "gp":"344491161102319616",
+            "gu":"344491161223692300",
+            "gw":"344491161139937282",
+            "half":"344491161164972032",
+            "hr":"344491160787615748",
+            "hw":"344491161181749268",
+            "infinity":"344491160619843593",
+            "q":"344491161060245504",
+            "r":"344491161274023938",
+            "rg":"344491161295257600",
+            "rp":"344491161076891648",
+            "rw":"344491161316098049",
+            "s":"292901509081858058",
+            "t":"344491161089736704",
+            "u":"344491161362235394",
+            "ub":"344491161248858113",
+            "up":"344491161395789824",
+            "ur":"344491161534070784",
+            "w":"344491161567887360",
+            "wb":"344491161374818304",
+            "wp":"344491161492258816",
+            "wu":"344491161441796098",
+            "x":"344491161345327126",
+            "y":"344491161374818305",
+            "z":"344491161035210755"
+        };
+        this.colors = {
+            "W": 0xF8F6D8,
+            "U": 0xC1D7E9,
+            "B": 0x0D0F0F,
+            "R": 0xE49977,
+            "G": 0xA3C095,
+            "GOLD": 0xE0C96C,
+            "ARTIFACT": 0x90ADBB,
+            "LAND": 0xAA8F84,
+            "NONE": 0xDAD9DE
+        };
+        this.permissionCache = {};
     }
 
     getCommands() {
         return this.commands;
     }
 
-    cardToString(card) {
-        const manaCost = card.manaCost ? " " + card.manaCost : "";
-        const cardInfo = [":black_square_button: **" + card.name + "**" + manaCost];
-        if (card.type) {
-            cardInfo.push(card.type);
-        }
-        if (card.text) {
-            cardInfo.push(card.text.replace(/\*/g, '\\*'));
-        }
-        if (card.loyalty) {
-            cardInfo.push(card.loyalty);
-        }
-        if (card.power) {
-            cardInfo.push(card.power.replace(/\*/g, '\\*') + "/" + card.toughness.replace(/\*/g, '\\*'));
-        }
-        if (card.legalities){
-            const legalities = [];
-            card.legalities.filter(elem => this.legalLimitations.includes(elem.format)).forEach(elem => {
-                legalities.push(elem.format + (elem.legality != 'Legal' ? ` (${elem.legality})`:''));
-            });
-            cardInfo.push('Formats: ' + legalities.join(", "));
-        }
-        if (card.printings) {
-            cardInfo.push(card.printings.join(", "));
-        }
-        cardInfo.push("http://magiccards.info/query?q=!" + encodeURIComponent(card.name));
-        return cardInfo.join("\n");
+    // replace mana and other symbols with actual emojis
+    renderEmojis(text) {
+        return text.replace(/{[^}]+?}/ig, match => {
+            const code = match.substr(1,match.length - 2).toLowerCase();
+            return this.manamojis[code] ?  '<:mana'+code+':'+this.manamojis[code]+'>' : '';
+        });
     }
 
-    findCard(cardName, cards) {
-        // create an array containing each card exactly once, preferring cards with image
-        const [cardsWithImage, cardsWithoutImage] = _.partition(cards, "imageUrl");
-        const differentCardsWithoutImage = _.differenceBy(cardsWithoutImage, cardsWithImage, "name");
-        const uniqCards = _.uniqBy(_.concat(cardsWithImage, differentCardsWithoutImage), "name");
+    // generate the embed card
+    generateEmbed(cards, command, hasEmojiPermission) {
+        return new Promise(resolve => {
+            const card = cards[0];
 
-        return uniqCards.find(c => c.name.toLowerCase() === cardName) ||
-            uniqCards.find(c => c.name.toLowerCase().startsWith(cardName)) || uniqCards[0];
+            // generate embed description text
+            let description = [card.oracle_text];
+            if (card.type_line) {
+                description.unshift('**'+card.type_line+'** ('+card.set.toUpperCase()+' '+_.capitalize(card.rarity)+')');
+            }
+            if (card.flavor_text) {
+                description.push('*' + card.flavor_text+'*');
+            }
+            if (card.loyalty) {
+                description.push('**Loyalty: ' + card.loyalty+'**');
+            }
+            if (card.power) {
+                description.push('**'+card.power.replace(/\*/g, '\\*') + "/" + card.toughness.replace(/\*/g, '\\*')+'**');
+            }
+            if (card.card_faces) {
+                // split cards are special
+                card.card_faces.forEach(face => {
+                    description.push('**'+face.type_line+'**');
+                    description.push(face.oracle_text);
+                    if (face.power) {
+                        description.push('**'+face.power.replace(/\*/g, '\\*')+'/'+face.toughness.replace(/\*/g, '\\*')+'**');
+                    }
+                    description.push('');
+                });
+            }
+
+            // determine embed border color
+            let color;
+            if (card.colors.length === 0) {
+                color = this.colors.NONE;
+                if (card.type_line.match(/artifact/i)) color = this.colors.ARTIFACT;
+                if (card.type_line.match(/land/i)) color = this.colors.LAND;
+            } else if (card.colors.length > 1) {
+                color = this.colors.GOLD;
+            } else {
+                color = this.colors[card.colors[0]];
+            }
+
+            // instantiate embed object
+            const embed = new Discord.RichEmbed({
+                title: card.name + ' ' + (hasEmojiPermission ? this.renderEmojis(card.mana_cost):card.mana_cost),
+                description: hasEmojiPermission ? this.renderEmojis(description.join('\n')) : description.join('\n'),
+                url: card.scryfall_uri,
+                color: color,
+                thumbnail: {url: card.image_uri}
+            });
+
+            // add pricing, if requested
+            if (command === 'price') {
+                let prices = [];
+                if(card.usd) prices.push('$' + card.usd);
+                if(card.eur) prices.push(card.eur + '€');
+                if(card.tix) prices.push(card.eur + ' Tix');
+                embed.addField('Prices', prices.join(' / '));
+            }
+
+            // add legalities, if requested
+            if (command === 'legal') {
+                const legalFormats = Object.keys(card.legalities).filter(format => card.legalities[format] === 'legal');
+                embed.addField('Legal in', legalFormats.map(_.capitalize).join(', '));
+            }
+
+            // add footer, if needed
+            if(cards.length > 1) {
+                let footer = cards.length - 1 + ' other hits: ';
+                footer += cards.slice(1,6).map(cardObj => cardObj.name).join('; ');
+                if (cards.length > 6) footer += '; ...';
+                embed.setFooter(footer);
+            }
+
+            // add rulings loaded from Gatherer, if needed
+            if(card.related_uris.gatherer && (command === "ruling" || command === "rulings")) {
+                rp(card.related_uris.gatherer).then(gatherer => {
+                    const $ = cheerio.load(gatherer);
+                    const rulings = [];
+                    $('.rulingsTable tr').each((index,elem) => {
+                        rulings.push('**'+$(elem).find('td:nth-child(1)').text()+'** '+$(elem).find('td:nth-child(2)').text());
+                        if (rulings.join('\n').length > 2040) {
+                            rulings[rulings.length - 1] = '...';
+                            return false;
+                        }
+                    });
+                    embed.setAuthor('Gatherer rulings for');
+                    embed.setDescription(rulings.join('\n').substr(0,2048));
+                    resolve(embed);
+                });
+            } else {
+                resolve(embed);
+            }
+        });
+    }
+
+    // fetch permissions from Guild to use custom emojis
+    getEmojiPermission(msg) {
+        return new Promise(resolve => {
+            if (msg.guild && this.permissionCache[msg.guild.id] === undefined) {
+                // in guild chat, fetch member role
+                msg.guild.fetchMember(msg.client.user.id).then(member => {
+                    if (member.permissions) {
+                        this.permissionCache[msg.guild.id] = member.permissions.has('USE_EXTERNAL_EMOJIS');
+                        resolve(this.permissionCache[msg.guild.id]);
+                    } else {
+                        resolve(true);
+                    }
+                });
+            } else if(msg.guild) {
+                // in guild chat, permission is cached
+                resolve(this.permissionCache[msg.guild.id])
+            } else {
+                // otherwise assume we can use custom emoji
+                resolve(true);
+            }
+        });
     }
 
     handleMessage(command, parameter, msg) {
         const cardName = parameter.toLowerCase();
-        return rp({
-            url: this.cardApi + cardName,
-            json: true
-        }).then(body => {
-            if (body.cards && body.cards.length) {
-                const card = this.findCard(cardName, body.cards);
-                let response = this.cardToString(card);
-                let otherCardNames = body.cards.filter(c => c.name !== card.name).map(c => "*" + c.name + "*");
-                if (otherCardNames.length) {
-                    otherCardNames.sort();
-                    otherCardNames = _.sortedUniq(otherCardNames);
-                    response += "\n\n:arrow_right: " + otherCardNames.length + " other matching cards: :large_blue_diamond:" + otherCardNames.join(" :large_blue_diamond:");
-                    if (response.length > this.maxLength) {
-                        response = response.substring(0, this.maxLength);
-                        response = response.substring(0, response.lastIndexOf(" :large_blue_diamond"));
-                        response += "\n\u2026";
-                    }
-                }
-                if (card.imageUrl) {
-                    return rp({
-                        url: card.imageUrl,
-                        encoding: null
-                    }).then(
-                        buffer => msg.channel.sendFile(buffer, _.snakeCase(_.deburr(card.name)) + ".jpg", response),
-                        error => {
-                            log.error("Downloading image", card.imageUrl, "failed.", error);
-                            // Couldn't download card image, fall back on message without image.
-                            return msg.channel.sendMessage(response);
-                        }
-                    );
-                }
-                return msg.channel.sendMessage(response);
+        // no card name, no lookup
+        if (!cardName) return;
+        // fetch data from API and Discord Guild
+        return Promise.all([
+            rp({url: this.cardApi + cardName, json: true}),
+            this.getEmojiPermission(msg)
+        ]).then(([body, permission]) => {
+            if (body.data && body.data.length) {
+                return this.generateEmbed(body.data, command, permission);
             }
+        }).then(embed => {
+            // send embed to channel
+            return msg.channel.send('', {embed});
         });
     }
 }

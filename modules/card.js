@@ -95,13 +95,44 @@ class MtgCardLoader {
         });
     }
 
+    // determine embed border color
+    getBorderColor(card) {
+        let color;
+        if (card.colors.length === 0) {
+            color = this.colors.NONE;
+            if (card.type_line.match(/artifact/i)) color = this.colors.ARTIFACT;
+            if (card.type_line.match(/land/i)) color = this.colors.LAND;
+        } else if (card.colors.length > 1) {
+            color = this.colors.GOLD;
+        } else {
+            color = this.colors[card.colors[0]];
+        }
+        return color;
+    }
+
+    // parse Gatherer rulings
+    parseGathererRulings(gatherer) {
+        const $ = cheerio.load(gatherer);
+        const rulings = [];
+        $('.rulingsTable tr').each((index,elem) => {
+            rulings.push('**'+$(elem).find('td:nth-child(1)').text()+':** '+$(elem).find('td:nth-child(2)').text());
+            if (rulings.join('\n').length > 2040) {
+                rulings[rulings.length - 1] = '...';
+                return false;
+            }
+        });
+        return rulings.join('\n');
+    }
+
     // generate the embed card
     generateEmbed(cards, command, hasEmojiPermission) {
         return new Promise(resolve => {
             const card = cards[0];
+            const ptToString = (card) =>
+                '**'+card.power.replace(/\*/g, '\\*') + "/" + card.toughness.replace(/\*/g, '\\*')+'**';
 
             // generate embed description text
-            let description = [card.oracle_text];
+            const description = [card.oracle_text];
             if (card.type_line) {
                 description.unshift('**'+card.type_line+'** ('+card.set.toUpperCase()+' '+_.capitalize(card.rarity)+')');
             }
@@ -112,7 +143,7 @@ class MtgCardLoader {
                 description.push('**Loyalty: ' + card.loyalty+'**');
             }
             if (card.power) {
-                description.push('**'+card.power.replace(/\*/g, '\\*') + "/" + card.toughness.replace(/\*/g, '\\*')+'**');
+                description.push(ptToString(card));
             }
             if (card.card_faces) {
                 // split cards are special
@@ -120,22 +151,10 @@ class MtgCardLoader {
                     description.push('**'+face.type_line+'**');
                     description.push(face.oracle_text);
                     if (face.power) {
-                        description.push('**'+face.power.replace(/\*/g, '\\*')+'/'+face.toughness.replace(/\*/g, '\\*')+'**');
+                        description.push(ptToString(face));
                     }
                     description.push('');
                 });
-            }
-
-            // determine embed border color
-            let color;
-            if (card.colors.length === 0) {
-                color = this.colors.NONE;
-                if (card.type_line.match(/artifact/i)) color = this.colors.ARTIFACT;
-                if (card.type_line.match(/land/i)) color = this.colors.LAND;
-            } else if (card.colors.length > 1) {
-                color = this.colors.GOLD;
-            } else {
-                color = this.colors[card.colors[0]];
             }
 
             // instantiate embed object
@@ -143,7 +162,7 @@ class MtgCardLoader {
                 title: card.name + ' ' + (hasEmojiPermission ? this.renderEmojis(card.mana_cost):card.mana_cost),
                 description: hasEmojiPermission ? this.renderEmojis(description.join('\n')) : description.join('\n'),
                 url: card.scryfall_uri,
-                color: color,
+                color: this.getBorderColor(card),
                 thumbnail: {url: card.image_uri}
             });
 
@@ -164,7 +183,7 @@ class MtgCardLoader {
 
             // add footer, if needed
             if(cards.length > 1) {
-                let footer = cards.length - 1 + ' other hits: ';
+                let footer = (cards.length - 1) + ' other hits:\n';
                 footer += cards.slice(1,6).map(cardObj => cardObj.name).join('; ');
                 if (cards.length > 6) footer += '; ...';
                 embed.setFooter(footer);
@@ -173,17 +192,8 @@ class MtgCardLoader {
             // add rulings loaded from Gatherer, if needed
             if(card.related_uris.gatherer && (command === "ruling" || command === "rulings")) {
                 rp(card.related_uris.gatherer).then(gatherer => {
-                    const $ = cheerio.load(gatherer);
-                    const rulings = [];
-                    $('.rulingsTable tr').each((index,elem) => {
-                        rulings.push('**'+$(elem).find('td:nth-child(1)').text()+'** '+$(elem).find('td:nth-child(2)').text());
-                        if (rulings.join('\n').length > 2040) {
-                            rulings[rulings.length - 1] = '...';
-                            return false;
-                        }
-                    });
                     embed.setAuthor('Gatherer rulings for');
-                    embed.setDescription(rulings.join('\n').substr(0,2048));
+                    embed.setDescription(this.parseGathererRulings(gatherer).substr(0,2048));
                     resolve(embed);
                 });
             } else {
@@ -224,12 +234,33 @@ class MtgCardLoader {
             rp({url: this.cardApi + cardName, json: true}),
             this.getEmojiPermission(msg)
         ]).then(([body, permission]) => {
+            // check if there are results
             if (body.data && body.data.length) {
-                return this.generateEmbed(body.data, command, permission);
+                // generate embed
+                this.generateEmbed(body.data, command, permission).then(embed => {
+                    return msg.channel.send('', {embed});
+                }).then(sentMessage => {
+                    // if multiple results, add reactions
+                    if (body.data.length > 1) {
+                        sentMessage.react('⬅').then(() => sentMessage.react('➡'));
+                        sentMessage.createReactionCollector(
+                            ({emoji} , user) => (emoji.toString() === '⬅' || emoji.toString() === '➡') && user.id === msg.author.id,
+                            {time: 30000, max: 20}
+                        ).on('collect', reaction => {
+                            //reaction.remove(msg.author); // needs edit message rights
+                            if(reaction.emoji.toString() === '⬅') {
+                                body.data.unshift(body.data.pop());
+                            } else {
+                                body.data.push(body.data.shift());
+                            }
+                            // edit the message to show the next card
+                            this.generateEmbed(body.data, command, permission).then(embed => {
+                                sentMessage.edit('', {embed});
+                            });
+                        }).on('end', () => body = null); // clear body from memory
+                    }
+                });
             }
-        }).then(embed => {
-            // send embed to channel
-            return msg.channel.send('', {embed});
         });
     }
 }

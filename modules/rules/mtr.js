@@ -166,7 +166,7 @@ class MTR {
             return new Discord.RichEmbed({
                 title: 'MTR - Error',
                 description: 'This section does not exist. Try asking for a chapter to get a list of available sections for that chapter.',
-                color: 0xff0000,
+                color: 0xff0000
             });
         }
 
@@ -178,7 +178,7 @@ class MTR {
         return new Discord.RichEmbed({
             title: 'MTR - Error',
             description: 'This chapter does not exist.',
-            color: 0xff0000,
+            color: 0xff0000
         }).addField('Available Chapters', availableChapters);
     }
 

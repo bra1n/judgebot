@@ -124,43 +124,56 @@ class MtgCardLoader {
         return rulings.join('\n');
     }
 
+    // generate description text from a card object
+    generateDescriptionText(card) {
+        const ptToString = (card) =>
+            '**'+card.power.replace(/\*/g, '\\*') + "/" + card.toughness.replace(/\*/g, '\\*')+'**';
+        const description = [card.oracle_text];
+        if (card.type_line) {
+            description.unshift('**'+card.type_line+'** ('+card.set.toUpperCase()+' '+_.capitalize(card.rarity)+')');
+        }
+        if (card.flavor_text) {
+            description.push('*' + card.flavor_text+'*');
+        }
+        if (card.loyalty) {
+            description.push('**Loyalty: ' + card.loyalty+'**');
+        }
+        if (card.power) {
+            description.push(ptToString(card));
+        }
+        if (card.card_faces) {
+            // split cards are special
+            card.card_faces.forEach(face => {
+                description.push('**'+face.type_line+'**');
+                description.push(face.oracle_text);
+                if (face.power) {
+                    description.push(ptToString(face));
+                }
+                description.push('');
+            });
+        }
+        return description.join('\n');
+    }
+
     // generate the embed card
     generateEmbed(cards, command, hasEmojiPermission) {
         return new Promise(resolve => {
             const card = cards[0];
-            const ptToString = (card) =>
-                '**'+card.power.replace(/\*/g, '\\*') + "/" + card.toughness.replace(/\*/g, '\\*')+'**';
 
-            // generate embed description text
-            const description = [card.oracle_text];
-            if (card.type_line) {
-                description.unshift('**'+card.type_line+'** ('+card.set.toUpperCase()+' '+_.capitalize(card.rarity)+')');
-            }
-            if (card.flavor_text) {
-                description.push('*' + card.flavor_text+'*');
-            }
-            if (card.loyalty) {
-                description.push('**Loyalty: ' + card.loyalty+'**');
-            }
-            if (card.power) {
-                description.push(ptToString(card));
-            }
-            if (card.card_faces) {
-                // split cards are special
-                card.card_faces.forEach(face => {
-                    description.push('**'+face.type_line+'**');
-                    description.push(face.oracle_text);
-                    if (face.power) {
-                        description.push(ptToString(face));
-                    }
-                    description.push('');
-                });
+            // generate embed title and description text
+            let title = card.name + ' ' + card.mana_cost;
+            let description = this.generateDescriptionText(card);
+
+            // are we allowed to use custom emojis? cool, then do so
+            if(hasEmojiPermission) {
+                title = this.renderEmojis(title);
+                description = this.renderEmojis(description);
             }
 
             // instantiate embed object
             const embed = new Discord.RichEmbed({
-                title: card.name + ' ' + (hasEmojiPermission ? this.renderEmojis(card.mana_cost):card.mana_cost),
-                description: hasEmojiPermission ? this.renderEmojis(description.join('\n')) : description.join('\n'),
+                title,
+                description,
                 url: card.scryfall_uri,
                 color: this.getBorderColor(card),
                 thumbnail: {url: card.image_uri}
@@ -257,7 +270,10 @@ class MtgCardLoader {
                             this.generateEmbed(body.data, command, permission).then(embed => {
                                 sentMessage.edit('', {embed});
                             });
-                        }).on('end', () => body = null); // clear body from memory
+                        }).on('end', () => {
+                            // clear body from memory
+                            body = null;
+                        });
                     }
                 });
             }

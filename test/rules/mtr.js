@@ -32,12 +32,12 @@ describe('MTR', function () {
                 mtr.cleanup($);
                 expect($('.section-header').length).to.equal(3);
             });
-            it('should mark appendices as sections', function () {
-                 const $ = cheerio.load('<body><h4>1. A Chapter</h4><h4>1.1 A Section</h4><p>Some Content</p><h4>Appendix A-An Appendix</h4><p>More content</p></body>');
-                 mtr.cleanup($);
-                 expect($('.section-header').length).to.equal(2);
-                 expect($('.section-header').last().text()).to.equal('Appendix A-An Appendix');
-            });
+            // it('should mark appendices as sections', function () {
+            //      const $ = cheerio.load('<body><h4>1. A Chapter</h4><h4>1.1 A Section</h4><p>Some Content</p><h4>Appendix A-An Appendix</h4><p>More content</p></body>');
+            //      mtr.cleanup($);
+            //      expect($('.section-header').length).to.equal(2);
+            //      expect($('.section-header').last().text()).to.equal('Appendix A-An Appendix');
+            // });
         });
         describe('#handleChapter', function () {
             it('should produce chapter entries for each chapter', function () {
@@ -63,13 +63,13 @@ describe('MTR', function () {
            
                 expect(mtr.mtrData.sections).to.have.deep.property('1\\.2.title', '1.2 Another Section');
             });
-            it('should produce section entries for appendices', function () {
-                expect(mtr.mtrData.sections).to.have.deep.property('appendix-a.title', 'Appendix A-An Appendix');
-            });
+            // it('should produce section entries for appendices', function () {
+            //     expect(mtr.mtrData.sections).to.have.deep.property('appendix-a.title', 'Appendix A-An Appendix');
+            // });
             it('should add section entries to the appropriate chapter', function () {
                 expect(mtr.mtrData.chapters).to.have.deep.property('1.sections[0]', '1.1');
                 expect(mtr.mtrData.chapters).to.have.deep.property('1.sections[1]', '1.2');
-                expect(mtr.mtrData.chapters).to.have.deep.property('appendices.sections[0]', 'appendix-a'); 
+                // expect(mtr.mtrData.chapters).to.have.deep.property('appendices.sections[0]', 'appendix-a');
             });
         });
         describe('#handleSectionContent', function () {
@@ -78,21 +78,21 @@ describe('MTR', function () {
                 const result = mtr.handleSectionContent($, $('.section-header').first(), "1.1 A Section", "1.1");
                 expect(result).to.equal('Some section content\n\nMore section content');
             });
-            it('should handle tables', function () {
-                const $ = cheerio.load([
-                    '<body><h4 class="section-header">1.1 A Section</h4><p>Some section content\n</p>',
-                    '<table><tr><th>col1header</th><th>col2header</th></tr>',
-                    '<tr><td>col1content</td><td>col2content</td></tr></table>'
-                ].join('\n'));
-
-                const result = mtr.handleSectionContent($, $('.section-header').first(), "1.1 A Section", "1.1");
-                const tableData = [
-                    ['col1header', 'col2header'],
-                    ['col1content', 'col2content']
-                ]
-                const textTable = new Table(null, tableData).render().split('\n').filter(l => l.trim().length !== 0).map(l => '`' + l + '`').join('\n');
-                expect(result).to.equal('Some section content\n\n' + textTable);
-            });
+            // it('should handle tables', function () {
+            //     const $ = cheerio.load([
+            //         '<body><h4 class="section-header">1.1 A Section</h4><p>Some section content\n</p>',
+            //         '<table><tr><th>col1header</th><th>col2header</th></tr>',
+            //         '<tr><td>col1content</td><td>col2content</td></tr></table>'
+            //     ].join('\n'));
+            //
+            //     const result = mtr.handleSectionContent($, $('.section-header').first(), "1.1 A Section", "1.1");
+            //     const tableData = [
+            //         ['col1header', 'col2header'],
+            //         ['col1content', 'col2content']
+            //     ]
+            //     const textTable = new Table(null, tableData).render().split('\n').filter(l => l.trim().length !== 0).map(l => '`' + l + '`').join('\n');
+            //     expect(result).to.equal('Some section content\n\n' + textTable);
+            // });
         });
     });
     describe('output', function () {
@@ -102,10 +102,10 @@ describe('MTR', function () {
                 const result = mtr.generateLink('3.5');
                 expect(result).to.equal(rulesBlogMTR + '3-5');
             });
-            it('should work for appendices', function () {
-                const result = mtr.generateLink('appendix-c');
-                expect(result).to.equal(rulesBlogMTR + '-appendix-c');
-            });
+            // it('should work for appendices', function () {
+            //     const result = mtr.generateLink('appendix-c');
+            //     expect(result).to.equal(rulesBlogMTR + '-appendix-c');
+            // });
         });
         describe('#formatChapter', function () {
             let chapter;
@@ -154,7 +154,7 @@ describe('MTR', function () {
             expect(mtr.mtrData.chapters).to.have.keys(_.flatten([_.range(1, 11).map(_.toString), 'appendices']));
 
             expect(mtr.mtrData.sections).to.contain.keys(_.range(1, 11).map(n => `${n}.1`));
-            expect(mtr.mtrData.sections).to.contain.key('appendix-b');
+            // expect(mtr.mtrData.sections).to.contain.key('appendix-b');
         });
 
          describe('#find', function() {
@@ -164,9 +164,9 @@ describe('MTR', function () {
             it('should work for section queries', function() {
                 expect(mtr.find('4.4')).to.contain('Players are expected to remember their own triggered abilities');
             });
-            it('should work for appendix queries', function () {
-                expect(mtr.find('appendix-b')).to.contain('Time Limits')
-            });
+            // it('should work for appendix queries', function () {
+            //     expect(mtr.find('appendix-b')).to.contain('Time Limits')
+            // });
             
             it('should give an error on unknown chapters', function() {
                 expect(mtr.find('11')).to.contain('not exist').and.to.contain('Available Chapters');

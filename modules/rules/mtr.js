@@ -15,7 +15,7 @@ class MTR {
         this.thumbnail = 'https://assets.magicjudges.org/judge-banner/images/magic-judge.png';
         this.mtrData = {
             description: '',
-            chapters: {appendices: {key: 'appendices', title: 'Appendices', sections: []}},
+            chapters: {},
             sections: {}
         };
 
@@ -62,7 +62,7 @@ class MTR {
         // mark chapter headers
         $('h4').filter((i, e) => /^\d+\.\s/.test($(e).text().trim())).addClass('chapter-header');
         // mark section headers
-        $('h4').filter((i, e) => /^(\d+\.\d+\s|Appendix)/.test($(e).text().trim())).addClass('section-header');
+        $('h4').filter((i, e) => /^(\d+\.\d+\s)/.test($(e).text().trim())).addClass('section-header');
     }
 
     handleChapters($) {
@@ -81,8 +81,8 @@ class MTR {
         $('.section-header').each((i, e) => {
 
             const title = $(e).text().trim();
-            const key = title.startsWith('Appendix') ? _.kebabCase(title.split('-', 1)[0]) : title.split(/\s/, 1)[0];
-            const chapter = key.startsWith('appendix') ? 'appendices' : key.split('.', 1)[0];
+            const key = title.split(/\s/, 1)[0];
+            const chapter = key.split('.', 1)[0];
             const content = this.handleSectionContent($, $(e), title, key);
 
             this.mtrData.sections[key] = {
@@ -97,7 +97,6 @@ class MTR {
     handleSectionContent($, sectionHeader, title, number) {
         /* on most sections we can just use the text, special cases are:
          *   - banlists (sections ending in deck construction), these are basically long lists of sets and cards
-         *   - some sections containing tables (draft timings and recommended number of rounds)
          */
         if (/Format Deck Construction$/.test(title)) {
             // Asking a bot for the banlist has to be one of the worst ways to inquire about card legality that I can imagine,
@@ -109,20 +108,8 @@ class MTR {
         const sectionContent = sectionHeader.nextUntil('.section-header,.chapter-header').wrap('<div></div>').parent();
         sectionContent.find('h4').replaceWith((i, e) => `<p>\n\n**${$(e).text().trim()}**\n\n</p>`);
 
-        // replace tables with an ASCII representation
-        sectionContent.find('table').replaceWith((i, e) => {         
-            const tableString = this.generateTextTable($, $(e));
-            return `<p>\n${tableString}\n</p>`;
-        });
-        // mark each line as a Codeblock (uses monospace font), otherwise message splitting will mess up the formatting
-        return sectionContent.text().trim().replace(/\n\s*\n/g, '#break#').replace(/\n/g,'').replace(/#break#/g,'\n\n');
-    }
-
-    generateTextTable($, table) {
-        const rows = table.find('tr:has("td,th")').map((i, e) => $(e).children()).get();
-        const data = rows.map(r => r.map((i, e) => $(e).text().trim()).get());
-        const textTable = new Table(null, data).render();
-        return  textTable.split('\n').filter(l => !/^\s*$/.test(l)).map(l => '`' + l + '`').join('\n');
+        // clean up line breaks
+        return sectionContent.text().trim().replace(/\n\s*\n/g, '#break#').replace(/\n/g,' ').replace(/#break#/g,'\n\n');
     }
 
     generateLink(key) {
@@ -134,7 +121,7 @@ class MTR {
     }
 
     formatChapter(chapter) {
-        const availableSections = chapter.sections.map(s => this.mtrData.sections[s].title).join('\n');
+        const availableSections = chapter.sections.map(s => '• '+this.mtrData.sections[s].title).join('\n');
         return new Discord.RichEmbed({
             title: `MTR - ${chapter.title}`,
             description: availableSections,
@@ -174,12 +161,11 @@ class MTR {
         if (chapter) {
             return this.formatChapter(chapter);
         }
-        const availableChapters = _.values(this.mtrData.chapters).map(c => c.title).join('\n');
         return new Discord.RichEmbed({
             title: 'MTR - Error',
             description: 'This chapter does not exist.',
             color: 0xff0000
-        }).addField('Available Chapters', availableChapters);
+        }).addField('Available Chapters', _.values(this.mtrData.chapters).map(c => '• '+c.title));
     }
 
     handleMessage(command, parameter, msg) {
@@ -188,11 +174,11 @@ class MTR {
             return msg.channel.send('', {embed});
         }
         return msg.channel.send('', {embed: new Discord.RichEmbed({
-            title: 'Magic: The Gathering Tournament Rules',
+            title: 'Magic Tournament Rules',
             description: this.mtrData.description,
             thumbnail: {url: this.thumbnail},
             url: this.location
-        })});
+        }).addField('Available Chapters', _.values(this.mtrData.chapters).map(c => '• '+c.title))});
     }
 }
 

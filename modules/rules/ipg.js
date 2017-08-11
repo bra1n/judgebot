@@ -2,15 +2,17 @@ const rp = require("request-promise-native");
 const cheerio = require("cheerio");
 const _ = require("lodash");
 const log = require("log4js").getLogger('ipg');
+const Discord = require("discord.js");
 
 const IPG_ADDRESS = process.env.IPG_ADDRESS || "https://sites.google.com/site/mtgfamiliar/rules/InfractionProcedureGuide-light.html";
 
 class IPG {
     constructor(initialize = true) {
-        this.location = "http://blogs.magicjudges.org/rules/ipg/";
-        this.maxPreview = 200;
+        this.location = "http://blogs.magicjudges.org/rules/ipg";
+        this.maxLength = 2040;
         this.commands = ["ipg"];
         this.ipgData = {};
+        this.thumbnail = 'https://assets.magicjudges.org/judge-banner/images/magic-judge.png';
         this.aliases = {
             'definition': '1.1',
             'applying': '1.1',
@@ -36,10 +38,12 @@ class IPG {
             'oa': '3.2',
             'sp': '3.3',
             'slowplay': '3.3',
-            'is': '3.4',
-            'shuffling': '3.4',
-            'ddlp': '3.5',
-            'd/dlp': '3.5',
+            'is': '3.9',
+            'shuffling': '3.9',
+            'dp': '3.5',
+            'deckproblem': '3.5',
+            'dlp': '3.4',
+            'decklistproblem': '3.4',
             'lpv': '3.6',
             'cpv': '3.7',
             'mc': '3.8',
@@ -118,7 +122,7 @@ class IPG {
     }
 
     collapseWhitespace(str) {
-        return str.trim().replace(/\n\s*\n/g, "\n\n");
+        return str.trim().replace(/\n\s*\n/g, "#break#").replace(/\n/g, '').replace(/#break#/g, '\n\n');
     }
 
     handleChapters($) {
@@ -129,6 +133,7 @@ class IPG {
             this.ipgData[number] = {
                 title: titleText,
                 sections: [],
+                url: this.location + number + '/',
                 text: this.collapseWhitespace($(h).nextUntil("h4").text())
             };
         });
@@ -139,13 +144,14 @@ class IPG {
             const titleText = this.titleCase($(h).text().trim());
             const number = titleText.split(" ", 1)[0];
             const chapterNumber = number.split(".", 1)[0];
-            const penalty = $(h).nextAll("table").first().find("td").text().trim();
+            const penalty = $(h).nextUntil(".section-header", "table").first().find("td").text().trim();
 
             this.ipgData[number] = {
                 title: titleText,
                 penalty: penalty,
                 subsections: [],
                 subsectionContents: {},
+                url: this.location + number.replace(/\./,'-') + '/',
                 text: this.collapseWhitespace($(h).nextUntil("h4").filter("p").text())
             };
 
@@ -177,58 +183,65 @@ class IPG {
         return this.commands;
     }
 
-    prettyPrintSectionTitle(section) {
-        return this.titleCase(section.replace("-", " "));
-    }
-
-    formatSections(sections) {
-        return sections.map(s => "*" + s + "*").join(", ");
-    }
-
     formatPreview(entry) {
-        const previewText = _.truncate(entry.text, {length: this.maxPreview, separator: ' '});
-        return  `**${entry.title}**\n${previewText}`;
+        return `**${entry.title}**\n${entry.text}`;
     }
 
+    // IPG Chapter (like "2")
     formatChapterEntry(entry) {
         const text = entry.text || this.formatPreview(this.ipgData[entry.sections[0]]);
 
-        return [
-            `**IPG ${entry.title}**`,
-            text,
-            `\n**Available Sections**: ${this.formatSections(entry.sections)}`
-        ].join('\n');
+        return new Discord.RichEmbed({
+            title: `IPG - ${entry.title}`,
+            description: _.truncate(text, {length: this.maxLength, separator: '\n'}),
+            thumbnail: {url: this.thumbnail},
+            url: entry.url
+        }).addField('Available Sections', entry.sections.map(s => `• ${this.ipgData[s].title}`));
     }
 
+    // IPG Section (like "2.1")
     formatSectionEntry(entry) {
-        const penalty = entry.penalty ? `\nPenalty: ${entry.penalty}\n` : '';
         const text = entry.text || this.formatPreview(entry.subsectionContents[entry.subsections[0]]);
-        return [
-            `**IPG ${entry.title}**${penalty}`,
-            text,
-            `\n**Available Subsections**: ${this.formatSections(entry.subsections)}`
-        ].join('\n')
+        const embed = new Discord.RichEmbed({
+            title: `IPG - ${entry.title}`,
+            description: _.truncate(text, {length: this.maxLength, separator: '\n'}),
+            thumbnail: {url: this.thumbnail},
+            url: entry.url
+        });
+        if (entry.penalty) {
+            embed.addField('Penalty', entry.penalty);
+        }
+        if (entry.subsections.length) {
+            embed.addField('Available Subsections', entry.subsections.map(s => `• ${s}`));
+        }
+
+        return embed;
     }
 
+    // IPG Subsection (like "2.1 definition")
     formatSubsectionEntry(sectionEntry, subsectionEntry) {
         const otherSections = sectionEntry.subsections.filter(s => s !== _.kebabCase(subsectionEntry.title));
 
-        return [
-            `**IPG ${sectionEntry.title} - ${subsectionEntry.title}**`,
-            subsectionEntry.text.join("\n\n"),
-            `**Other available subsections**: ${this.formatSections(otherSections)}`
-        ].join('\n\n');
+        return new Discord.RichEmbed({
+            title: `IPG - ${sectionEntry.title} - ${subsectionEntry.title}`,
+            description: _.truncate(subsectionEntry.text.join("\n\n"),{length: this.maxLength, separator: '\n'}),
+            thumbnail: {url: this.thumbnail},
+            footer: {text: `Other available subsections: ${otherSections.join(', ')}`},
+            url: sectionEntry.url + '#' + subsectionEntry.title.toLowerCase()
+        });
     }
 
+    // main lookup method
     find(parameters) {
         const entry = this.ipgData[parameters[0]];
         if (!entry) {
             let availableEntries = _.keys(this.ipgData);
             availableEntries.sort();
-            return [
-                'These parameters don\'t match any entries in the IPG.',
-                `**Available entries**: ${this.formatSections(availableEntries)}`
-            ].join('\n\n');
+            return new Discord.RichEmbed({
+                title: 'IPG - Error',
+                description: 'These parameters don\'t match any entries in the IPG.',
+                color: 0xff0000
+            }).addField('Available Chapters', this.getChapters());
         }
 
         if(parameters.length === 1) {
@@ -239,32 +252,54 @@ class IPG {
             }
         } else {
             if (!entry.subsections) {
-                return `The entry ${entry.title} isn't a section, subsection queries are only available for sections.`;
+                return new Discord.RichEmbed({
+                    title: 'IPG - Error',
+                    description: `The entry **${entry.title}** isn't a section, subsection queries are only available for sections.`,
+                    color: 0xff0000
+                });
             }
             const subsectionEntry = entry.subsectionContents[parameters[1]];
             if (!subsectionEntry) {
-                const availableSubsections = this.formatSections(entry.subsections);
-                return [
-                    `The section ${entry.title} does not have a subsection with that name.`,
-                    `**Available Subsections**: ${availableSubsections}`
-                ].join('\n\n')
+                const embed = new Discord.RichEmbed({
+                    title: 'IPG - Error',
+                    description: `The section **${entry.title}** does not have a subsection with that name.`,
+                    color: 0xff0000
+                });
+                if (entry.subsections.length) {
+                    embed.addField('Available Subsections', entry.subsections.join(', '));
+                }
+                return embed;
             }
             return this.formatSubsectionEntry(entry, subsectionEntry);
         }
     }
 
+    getChapters() {
+        return _
+            .values(this.ipgData)
+            .filter(c => c.title.match(/^\d+\s/))
+            .map(c => '• '+c.title.replace(/^(\d+)\s/,'$1. '));
+    }
+
     handleParameters(parameter) {
         let parameters = parameter.trim().toLowerCase().split(/\s+/);
-        if(this.aliases[parameters[0]]) parameters[0] = this.aliases[parameters[0]];
+        if (this.aliases[parameters[0]]) {
+            parameters[0] = this.aliases[parameters[0]];
+        }
         return parameters;
     }
 
     handleMessage(command, parameter, msg) {
         if (parameter) {
-            const result = this.find(this.handleParameters(parameter));
-            return msg.channel.sendMessage(result, {split: true});
+            const embed = this.find(this.handleParameters(parameter));
+            return msg.channel.send('', {embed});
         } else {
-            return msg.channel.sendMessage("**Infraction Procedure Guide**: <" + this.location + ">");
+            return msg.channel.send('', {embed: new Discord.RichEmbed({
+                title: 'Magic Infraction Procedure Guide',
+                description: this.ipgData.description,
+                thumbnail: {url: this.thumbnail},
+                url: this.location
+            }).addField('Available Chapters', this.getChapters())});
         }
     }
 }

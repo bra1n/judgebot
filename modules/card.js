@@ -257,7 +257,7 @@ class MtgCardLoader {
             requestPromise.then(response => {
                 if (response.data) {
                     // if cache is too big, remove the oldest entry
-                    if (this.cardCacheDict.length > this.cardCacheLimit) {
+                    if (this.cardCacheDict.length >= this.cardCacheLimit) {
                         delete this.cardCache[this.cardCacheDict.shift()];
                     }
                     // cache results

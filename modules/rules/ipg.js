@@ -275,7 +275,7 @@ class IPG {
     }
 
     getChapters() {
-        return _
+        return Object
             .values(this.ipgData)
             .filter(c => c.title.match(/^\d+\s/))
             .map(c => '• '+c.title.replace(/^(\d+)\s/,'$1. '));

@@ -8,6 +8,9 @@ class MtgCardLoader {
     constructor() {
         this.commands = ["card", "price", "rulings", "ruling", "legal"];
         this.cardApi = "https://api.scryfall.com/cards/search?q=";
+        // Discord bots can use custom emojis globally, so we just reference these Manamoji through their code / ID
+        // (currently hosted on the Judgebot testing discord)
+        // @see https://github.com/scryfall/thopter/tree/master/manamoji
         this.manamojis = {
             "0":"344491158384410625",
             "1":"344491158723887107",
@@ -69,6 +72,7 @@ class MtgCardLoader {
             "y":"344491161374818305",
             "z":"344491161035210755"
         };
+        // embed border colors depending on card color(s)
         this.colors = {
             "W": 0xF8F6D8,
             "U": 0xC1D7E9,
@@ -80,6 +84,7 @@ class MtgCardLoader {
             "LAND": 0xAA8F84,
             "NONE": 0xDAD9DE
         };
+        // cache for Discord permission lookup
         this.permissionCache = {};
     }
 
@@ -90,8 +95,8 @@ class MtgCardLoader {
     // replace mana and other symbols with actual emojis
     renderEmojis(text) {
         return text.replace(/{[^}]+?}/ig, match => {
-            const code = match.substr(1,match.length - 2).toLowerCase();
-            return this.manamojis[code] ?  '<:mana'+code+':'+this.manamojis[code]+'>' : '';
+            const code = match.replace(/[^a-z0-9]/ig,'').toLowerCase();
+            return this.manamojis[code] ?  '<:'+(code.length < 2 ? code+'_':code)+':'+this.manamojis[code]+'>':'';
         });
     }
 
@@ -164,9 +169,9 @@ class MtgCardLoader {
             let title = card.name + ' ' + card.mana_cost;
             let description = this.generateDescriptionText(card);
 
-            // are we allowed to use custom emojis? cool, then do so
+            // are we allowed to use custom emojis? cool, then do so, but make sure the title still fits
             if(hasEmojiPermission) {
-                title = this.renderEmojis(title);
+                title = _.truncate(this.renderEmojis(title), {length: 256, separator: '<'});
                 description = this.renderEmojis(description);
             }
 
@@ -190,8 +195,8 @@ class MtgCardLoader {
 
             // add legalities, if requested
             if (command === 'legal') {
-                const legalFormats = Object.keys(card.legalities).filter(format => card.legalities[format] === 'legal');
-                embed.addField('Legal in', legalFormats.map(_.capitalize).join(', '));
+                const legalities = (_.invertBy(card.legalities).legal || []).map(_.capitalize).join(', ');
+                embed.addField('Legal in', legalities || 'Nowhere');
             }
 
             // add footer, if needed
@@ -270,13 +275,16 @@ class MtgCardLoader {
                             this.generateEmbed(body.data, command, permission).then(embed => {
                                 sentMessage.edit('', {embed});
                             });
-                        }).on('end', () => {
-                            // clear body from memory
-                            body = null;
                         });
                     }
                 });
             }
+        }, err => {
+            return msg.channel.send('', {embed: new Discord.RichEmbed({
+                title: 'Error',
+                description: 'No cards matched `'+cardName+'`.',
+                color: 0xff0000
+            })});
         });
     }
 }

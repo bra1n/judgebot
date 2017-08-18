@@ -1,7 +1,6 @@
 const _ = require('lodash');
 const cheerio = require('cheerio');
 const rp = require('request-promise-native');
-const Table = require('tty-table');
 const log = require('log4js').getLogger('mtr');
 const Discord = require('discord.js');
 

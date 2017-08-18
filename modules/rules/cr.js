@@ -100,10 +100,9 @@ class CR {
     appendSubrules(parameter) {
         let description = this.crData[parameter];
         if (description && this.crData[parameter + 'a']) {
-            let x = 97; // 'a'
-            while(this.crData[parameter + String.fromCharCode(x)]) {
-                description += '\n\n' + this.crData[parameter + String.fromCharCode(x)];
-                x++;
+            // keep looking for subrules, starting with "123a" and going until "123z" or we don't find another subrule
+            for(let x = 'a'.charCodeAt(0); this.crData[parameter + String.fromCharCode(x)]; x++) {
+                description += '\n' + this.crData[parameter + String.fromCharCode(x)];
             }
         }
         return description;

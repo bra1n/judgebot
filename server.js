@@ -6,7 +6,7 @@ require('colors');
 
 log.setLevel(process.env.LOG_LEVEL || "INFO");
 
-const commandChar = process.env.COMMAND_CHAR || "!"; // single character
+const commandChar = process.env.COMMAND_CHAR || "!"; // should be ideally a single character
 const spamTimeout = 3000; // milliseconds
 const modules = [
     'rules/mtr',
@@ -40,7 +40,7 @@ bot.on("message", msg => {
     // Example: ^!(card|price) ?(.*)$|!(card|price) ?([^!]*)(!|$)
     const charPattern = _.escapeRegExp(commandChar);
     const commandPattern = charPattern+'('+Object.keys(handlers).map(_.escapeRegExp).join('|')+')';
-    const regExpPattern = `^${commandPattern} ?(.*)$|${commandPattern} ?([^${charPattern}]*)(${charPattern}|$)`;
+    const regExpPattern = `${commandPattern} ?([^${charPattern}]*)(${charPattern}|$)`;
 
     const queries = msg.content.match(new RegExp(regExpPattern, 'ig')) || [];
     const lastMessage = userMessageTimes[msg.author.id] || 0;
@@ -92,6 +92,7 @@ bot.on('guildDelete', (guild) => {
 
 bot.login(process.env.DISCORD_TOKEN);
 
+// send updated stats to bots.discord.com
 const updateServerCount = () => {
     const options = {
         url: 'https://bots.discord.pw/api/bots/240537940378386442/stats',

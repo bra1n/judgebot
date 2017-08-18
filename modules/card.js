@@ -86,6 +86,10 @@ class MtgCardLoader {
         };
         // cache for Discord permission lookup
         this.permissionCache = {};
+        // cache for Card lookup
+        this.cardCache = {};
+        this.cardCacheDict = [];
+        this.cardCacheLimit = 100;
     }
 
     getCommands() {
@@ -243,13 +247,35 @@ class MtgCardLoader {
         });
     }
 
+    // fetch the cards from Scryfall and cache them
+    getCards(cardName) {
+        let requestPromise;
+        if (this.cardCache[cardName]) {
+            requestPromise = new Promise(resolve => resolve(this.cardCache[cardName]));
+        } else {
+            requestPromise = rp({url: this.cardApi + cardName, json: true});
+            requestPromise.then(response => {
+                if (response.data) {
+                    // if cache is too big, remove the oldest entry
+                    if (this.cardCacheDict.length > this.cardCacheLimit) {
+                        delete this.cardCache[this.cardCacheDict.shift()];
+                    }
+                    // cache results
+                    this.cardCache[cardName] = response;
+                    this.cardCacheDict.push(cardName);
+                }
+            });
+        }
+        return requestPromise;
+    }
+
     handleMessage(command, parameter, msg) {
         const cardName = parameter.toLowerCase();
         // no card name, no lookup
         if (!cardName) return;
         // fetch data from API and Discord Guild
         return Promise.all([
-            rp({url: this.cardApi + cardName, json: true}),
+            this.getCards(cardName),
             this.getEmojiPermission(msg)
         ]).then(([body, permission]) => {
             // check if there are results

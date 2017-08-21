@@ -1,7 +1,9 @@
 const Discord = require("discord.js");
-const colors = require('colors');
 const request = require("request");
 const log = require("log4js").getLogger('bot');
+const _ = require("lodash");
+require('colors');
+
 log.setLevel(process.env.LOG_LEVEL || "INFO");
 
 const commandChar = process.env.COMMAND_CHAR || "!";
@@ -34,29 +36,41 @@ const userMessageTimes = {};
 
 /* Handle incoming messages */
 bot.on("message", msg => {
-    const query = msg.content.substr(commandChar.length).split(" ");
-    const command = query[0].toLowerCase();
-    const parameter = query.length > 1 ? query.slice(1).join(" ") : "";
+    // generate RegExp pattern for message parsing
+    // Example: ^!(card|price) ?(.*)$|!(card|price) ?([^!]*)(!|$)
+    const charPattern = _.escapeRegExp(commandChar);
+    const commandPattern = charPattern+'('+Object.keys(handlers).map(_.escapeRegExp).join('|')+')';
+    const regExpPattern = `${commandPattern} ?(.*?)(${charPattern}[^a-z0-9]|$)`;
+
+    const queries = msg.content.match(new RegExp(regExpPattern, 'ig')) || [];
     const lastMessage = userMessageTimes[msg.author.id] || 0;
 
+    // check if it's a message for us
     if (bot.user.id === msg.author.id || // don't message yourself
-        msg.content.substr(0, commandChar.length) != commandChar || // not the right command char
-        !handlers[command] || // no handler for this command
+        !queries.length || // no commands entered
         new Date().getTime() - lastMessage < spamTimeout) { // too spammy
         return;
     }
 
-    let logMessage = [
-        '[' + (msg.guild ? msg.guild.name.blue : 'private query') + ']',
-        msg.channel.name ? '[' + msg.channel.name + ']' : '',
-        msg.author.username.blue + '#' + msg.author.discriminator.blue,
-        'used', command.green, parameter.yellow
-    ];
-    log.info(logMessage.join(' '));
+    // store the time to prevent spamming from this user
     userMessageTimes[msg.author.id] = new Date().getTime();
-    const ret = handlers[command].handleMessage(command, parameter, msg);
-    // if ret is undefined or not a thenable this just returns a resolved promise and the callback won't be called
-    Promise.resolve(ret).catch(e => log.error('An error occured while handling', msg.content.green, ":\n", e));
+
+    // only use the first 3 commands in a message, ignore the rest
+    queries.slice(0,3).forEach(query => {
+        const command = query.split(" ")[0].substr(commandChar.length).toLowerCase();
+        const parameter = query.split(" ").slice(1).join(" ").replace(new RegExp(charPattern+'$', 'i'),'');
+
+        let logMessage = [
+            '[' + (msg.guild ? msg.guild.name.blue : 'private query') + ']',
+            msg.channel.name ? '[' + msg.channel.name + ']' : '',
+            msg.author.username.blue + '#' + msg.author.discriminator.blue,
+            'used', command.green, parameter.yellow
+        ];
+        log.info(logMessage.join(' '));
+        const ret = handlers[command].handleMessage(command, parameter, msg);
+        // if ret is undefined or not a thenable this just returns a resolved promise and the callback won't be called
+        Promise.resolve(ret).catch(e => log.error('An error occured while handling', msg.content.green, ":", e.message));
+    })
 });
 
 /* Bot event listeners */
@@ -78,6 +92,7 @@ bot.on('guildDelete', (guild) => {
 
 bot.login(process.env.DISCORD_TOKEN);
 
+// send updated stats to bots.discord.com
 const updateServerCount = () => {
     const options = {
         url: 'https://bots.discord.pw/api/bots/240537940378386442/stats',

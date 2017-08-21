@@ -1,18 +1,20 @@
 const _ = require('lodash');
 const cheerio = require('cheerio');
 const rp = require('request-promise-native');
-const Table = require('tty-table');
 const log = require('log4js').getLogger('mtr');
+const Discord = require('discord.js');
 
 const MTR_ADDRESS = process.env.MTR_ADDRESS || 'https://sites.google.com/site/mtgfamiliar/rules/MagicTournamentRules-light.html';
 
 class MTR {
     constructor(initialize = true) {
         this.location = 'http://blogs.magicjudges.org/rules/mtr';
-        this.maxLength = 1500;
+        this.maxLength = 2040;
         this.commands = ['mtr'];
+        this.thumbnail = 'https://assets.magicjudges.org/judge-banner/images/magic-judge.png';
         this.mtrData = {
-            chapters: {appendices: {key: 'appendices', title: 'Appendices', sections: []}},
+            description: '',
+            chapters: {},
             sections: {}
         };
 
@@ -40,6 +42,9 @@ class MTR {
     }
 
     cleanup($) {
+        // get description from body
+        this.mtrData.description = $('body').get(0).childNodes[4].data.trim();
+
         // wrap standalone text nodes in p tags
         const nodes = $('body').contents();
         for (let i = 0; i < nodes.length; i++) {
@@ -56,7 +61,7 @@ class MTR {
         // mark chapter headers
         $('h4').filter((i, e) => /^\d+\.\s/.test($(e).text().trim())).addClass('chapter-header');
         // mark section headers
-        $('h4').filter((i, e) => /^(\d+\.\d+\s|Appendix)/.test($(e).text().trim())).addClass('section-header');
+        $('h4').filter((i, e) => /^(\d+\.\d+\s)/.test($(e).text().trim())).addClass('section-header');
     }
 
     handleChapters($) {
@@ -75,8 +80,8 @@ class MTR {
         $('.section-header').each((i, e) => {
 
             const title = $(e).text().trim();
-            const key = title.startsWith('Appendix') ? _.kebabCase(title.split('-', 1)[0]) : title.split(/\s/, 1)[0];
-            const chapter = key.startsWith('appendix') ? 'appendices' : key.split('.', 1)[0];
+            const key = title.split(/\s/, 1)[0];
+            const chapter = key.split('.', 1)[0];
             const content = this.handleSectionContent($, $(e), title, key);
 
             this.mtrData.sections[key] = {
@@ -91,7 +96,6 @@ class MTR {
     handleSectionContent($, sectionHeader, title, number) {
         /* on most sections we can just use the text, special cases are:
          *   - banlists (sections ending in deck construction), these are basically long lists of sets and cards
-         *   - some sections containing tables (draft timings and recommended number of rounds)
          */
         if (/Format Deck Construction$/.test(title)) {
             // Asking a bot for the banlist has to be one of the worst ways to inquire about card legality that I can imagine,
@@ -99,24 +103,12 @@ class MTR {
             return `You can find the full text of ${title} on <${this.generateLink(number)}>`;
         }
 
-        // there are some headers which are neiter section nor chapter headers interspersed in the secions
+        // there are some headers which are neither section nor chapter headers interspersed in the sections
         const sectionContent = sectionHeader.nextUntil('.section-header,.chapter-header').wrap('<div></div>').parent();
         sectionContent.find('h4').replaceWith((i, e) => `<p>\n\n**${$(e).text().trim()}**\n\n</p>`);
 
-        // replace tables with an ASCII representation
-        sectionContent.find('table').replaceWith((i, e) => {         
-            const tableString = this.generateTextTable($, $(e));
-            return `<p>\n${tableString}\n</p>`;
-        });
-        // mark each line as a Codeblock (uses monospace font), otherwise message splitting will mess up the formatting
-        return sectionContent.text().trim().replace(/\n\s+\n/, '\n\n');
-    }
-
-    generateTextTable($, table) {
-        const rows = table.find('tr:has("td,th")').map((i, e) => $(e).children()).get();
-        const data = rows.map(r => r.map((i, e) => $(e).text().trim()).get());
-        const textTable = new Table(null, data).render();
-        return  textTable.split('\n').filter(l => !/^\s*$/.test(l)).map(l => '`' + l + '`').join('\n');
+        // clean up line breaks
+        return sectionContent.text().trim().replace(/\n\s*\n/g, '#break#').replace(/\n/g,' ').replace(/#break#/g,'\n\n');
     }
 
     generateLink(key) {
@@ -128,24 +120,22 @@ class MTR {
     }
 
     formatChapter(chapter) {
-        const availableSections = chapter.sections.map(s => `*${_.truncate(this.mtrData.sections[s].title)}* (${s})`).join(', ');
-        return [
-            `**MTR - ${chapter.title}**`,
-            `**Available Sections**: ${availableSections}`
-        ].join('\n\n');
+        const availableSections = chapter.sections.map(s => '• '+this.mtrData.sections[s].title).join('\n');
+        return new Discord.RichEmbed({
+            title: `MTR - ${chapter.title}`,
+            description: availableSections,
+            thumbnail: {url: this.thumbnail},
+            url: 'https://blogs.magicjudges.org/rules/mtr/#'+chapter.title.toLowerCase().replace(/ +/g,'-')
+        });
     }
 
     formatSection(section) {
-        const sectionContent = [
-            `**MTR - ${section.title}**`,
-            section.content
-        ].join('\n\n');
-        if (sectionContent.length <= this.maxLength) {
-            return sectionContent;
-        }
-        // truncate long sections and provide a link to the full text
-        const sectionURL = `\n\u2026\n\nSee <${this.generateLink(section.key)}> for full text.`
-        return _.truncate(sectionContent, {length: this.maxLength, separator: '\n', omission: sectionURL  });
+        return new Discord.RichEmbed({
+            title: `MTR - ${section.title}`,
+            description: _.truncate(section.content, {length: this.maxLength, separator: '\n'}),
+            thumbnail: {url: this.thumbnail},
+            url: this.generateLink(section.key)
+        });
     }
 
     getCommands() {
@@ -159,23 +149,35 @@ class MTR {
             if (section) {
                 return this.formatSection(section);
             }
-            return 'This section does not exist. Try asking for a chapter to get a list of available sections for that chapter.';
+            return new Discord.RichEmbed({
+                title: 'MTR - Error',
+                description: 'This section does not exist. Try asking for a chapter to get a list of available sections for that chapter.',
+                color: 0xff0000
+            });
         }
 
         const chapter =  this.mtrData.chapters[parameter];
         if (chapter) {
             return this.formatChapter(chapter);
         }
-        const availableChapters = _.values(this.mtrData.chapters).map(c => `*${c.title}*`).join(', ');
-        return `This chapter does not exist.\n**Available Chapters**: ${availableChapters}`;
+        return new Discord.RichEmbed({
+            title: 'MTR - Error',
+            description: 'This chapter does not exist.',
+            color: 0xff0000
+        }).addField('Available Chapters', _.values(this.mtrData.chapters).map(c => '• '+c.title));
     }
 
     handleMessage(command, parameter, msg) {
         if (parameter) {
-            const result = this.find(parameter.trim());
-            return msg.channel.sendMessage(result, {split: true});
+            const embed = this.find(parameter.trim());
+            return msg.channel.send('', {embed});
         }
-        return msg.channel.sendMessage('**Magic Tournament Rules**: <' + this.location + '>');
+        return msg.channel.send('', {embed: new Discord.RichEmbed({
+            title: 'Magic Tournament Rules',
+            description: this.mtrData.description,
+            thumbnail: {url: this.thumbnail},
+            url: this.location
+        }).addField('Available Chapters', _.values(this.mtrData.chapters).map(c => '• '+c.title))});
     }
 }
 

@@ -193,7 +193,7 @@ class MtgCardLoader {
                 let prices = [];
                 if(card.usd) prices.push('$' + card.usd);
                 if(card.eur) prices.push(card.eur + '€');
-                if(card.tix) prices.push(card.eur + ' Tix');
+                if(card.tix) prices.push(card.tix + ' Tix');
                 embed.addField('Prices', prices.join(' / '));
             }
 

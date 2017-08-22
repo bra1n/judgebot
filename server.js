@@ -40,7 +40,7 @@ bot.on("message", msg => {
     // Example: ^!(card|price) ?(.*)$|!(card|price) ?([^!]*)(!|$)
     const charPattern = _.escapeRegExp(commandChar);
     const commandPattern = charPattern+'('+Object.keys(handlers).map(_.escapeRegExp).join('|')+')';
-    const regExpPattern = `${commandPattern} ?(.*?)(${charPattern}[^a-z0-9]|$)`;
+    const regExpPattern = `${commandPattern}( .*?)?(${charPattern}[^a-z0-9]|$)`;
 
     const queries = msg.content.match(new RegExp(regExpPattern, 'ig')) || [];
     const lastMessage = userMessageTimes[msg.author.id] || 0;

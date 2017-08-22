@@ -26,7 +26,7 @@ class Help {
             ':link: https://bots.discord.pw/bots/240537940378386442',
             ':link: https://github.com/bra1n/judgebot'
         ].join('\n');
-        return msg.author.sendMessage(response);
+        return msg.author.send(response);
     }
 }
 module.exports = Help;

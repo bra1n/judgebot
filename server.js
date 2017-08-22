@@ -75,7 +75,6 @@ bot.on("message", msg => {
 
 /* Bot event listeners */
 bot.on('ready', () => {
-    bot.user.setGame('Magic: The Gathering');
     log.info('Bot is ready! Username:', bot.user.username.green, 'Servers:', (bot.guilds.size + '').blue);
     updateServerCount();
 });
@@ -94,6 +93,13 @@ bot.login(process.env.DISCORD_TOKEN);
 
 // send updated stats to bots.discord.com
 const updateServerCount = () => {
+    bot.user.setPresence({
+        game: {
+            name: 'MTG on '+ bot.guilds.size +' servers',
+            url:'https://bots.discord.pw/bots/240537940378386442'
+        }
+    });
+
     const options = {
         url: 'https://bots.discord.pw/api/bots/240537940378386442/stats',
         method: 'POST',

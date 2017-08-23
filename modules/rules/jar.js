@@ -14,9 +14,9 @@ class JAR {
 
     handleMessage(command, parameter, msg) {
         if (parameter) {
-            return msg.channel.sendMessage(this.find(parameter));
+            return msg.channel.send(this.find(parameter));
         }
-        return msg.channel.sendMessage('**Judging at Regular**: <' + this.Location + '>');
+        return msg.channel.send('**Judging at Regular**: <' + this.Location + '>');
     }
 }
 module.exports = JAR;

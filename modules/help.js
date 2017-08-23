@@ -9,7 +9,8 @@ class Help {
             '!ipg': 'Show an entry from the Infraction Procedure Guide, *Example: !ipg 4.2, !ipg grv philosophy*',
             '!mtr': 'Show an entry from Magic: The Gathering Tournament Rules, *Example: !mtr 2, !mtr 4.2*',
             '!cr': 'Show an entry from the Comprehensive Rulebook, *Example: !cr 100.6b*',
-            '!define': 'Show a definition from the Comprehensive Rulebook, *Example: !define phasing*'
+            '!define': 'Show a definition from the Comprehensive Rulebook, *Example: !define phasing*',
+            '!hangman': 'Start a game of hangman, where you have to guess the card namen with reaction letters, can be played at easy, medium or hard, *Example: !hangman easy*'
         };
     }
 

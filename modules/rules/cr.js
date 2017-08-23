@@ -109,7 +109,11 @@ class CR {
     }
 
     handleMessage(command, parameter, msg) {
-        parameter = parameter.trim().replace(/\.$/, "").toLowerCase();
+        // use only the first parameter
+        let cleanParam = parameter.trim().split(" ")[0].replace(/\.$/, "").toLowerCase();
+        // in case there is a second parameter "ex", append it too
+        if (parameter.toLowerCase().split(" ")[1] == "ex") cleanParam += ' ex';
+
         if (command === "cr" || command === "rule") {
             const embed = new Discord.RichEmbed({
                 title: 'Comprehensive Rules',
@@ -117,23 +121,23 @@ class CR {
                 thumbnail: {url: this.thumbnail},
                 url: this.location + '/'
             });
-            if (parameter && this.crData[parameter]) {
-                embed.setTitle('CR - Rule '+parameter.replace(/ ex$/,' Examples'));
-                embed.setDescription(_.truncate(this.appendSubrules(parameter), {length: this.maxLength, separator: '\n'}));
-                embed.setURL(this.location + parameter.substr(0,3) + '/');
-                if (this.crData[parameter + ' ex']) {
-                    embed.setFooter('Use "!cr '+parameter+' ex" to see examples.');
+            if (cleanParam && this.crData[cleanParam]) {
+                embed.setTitle('CR - Rule '+cleanParam.replace(/ ex$/,' Examples'));
+                embed.setDescription(_.truncate(this.appendSubrules(cleanParam), {length: this.maxLength, separator: '\n'}));
+                embed.setURL(this.location + cleanParam.substr(0,3) + '/');
+                if (this.crData[cleanParam + ' ex']) {
+                    embed.setFooter('Use "!cr '+cleanParam+' ex" to see examples.');
                 }
             }
             return msg.channel.send('', {embed});
-        } else if (command === "define" && parameter && this.glossary[parameter]) {
+        } else if (command === "define" && cleanParam && this.glossary[cleanParam]) {
             const embed = new Discord.RichEmbed({
-                title: 'CR - Glossary for "'+parameter+'"',
-                description: this.glossary[parameter],
+                title: 'CR - Glossary for "'+cleanParam+'"',
+                description: this.glossary[cleanParam],
                 thumbnail: {url: this.thumbnail},
                 url: this.location + '/cr-glossary/'
             });
-            const rule = this.glossary[parameter].match(/rule (\d+\.\w+)/i);
+            const rule = this.glossary[cleanParam].match(/rule (\d+\.\w+)/i);
             if (rule && this.crData[rule[1]]) {
                 embed.addField('CR - Rule '+rule[1], _.truncate(this.appendSubrules(rule[1]), {length: 1020, separator: '\n'}));
             }

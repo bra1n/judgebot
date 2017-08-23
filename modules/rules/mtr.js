@@ -169,7 +169,7 @@ class MTR {
 
     handleMessage(command, parameter, msg) {
         if (parameter) {
-            const embed = this.find(parameter.trim());
+            const embed = this.find(parameter.toLowerCase().trim().split(" ")[0]);
             return msg.channel.send('', {embed});
         }
         return msg.channel.send('', {embed: new Discord.RichEmbed({

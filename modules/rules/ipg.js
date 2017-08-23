@@ -244,33 +244,16 @@ class IPG {
             }).addField('Available Chapters', this.getChapters());
         }
 
-        if(parameters.length === 1) {
-            if (parameters[0].indexOf('.') === -1){
+        if (parameters[1] && entry.subsections && entry.subsectionContents[parameters[1]]) {
+            // we have a second parameter and available subsections that match it
+            return this.formatSubsectionEntry(entry, entry.subsectionContents[parameters[1]]);
+        } else {
+            // only show the main entry
+            if (parameters[0].indexOf('.') === -1) {
                 return this.formatChapterEntry(entry);
             } else {
                 return this.formatSectionEntry(entry);
             }
-        } else {
-            if (!entry.subsections) {
-                return new Discord.RichEmbed({
-                    title: 'IPG - Error',
-                    description: `The entry **${entry.title}** isn't a section, subsection queries are only available for sections.`,
-                    color: 0xff0000
-                });
-            }
-            const subsectionEntry = entry.subsectionContents[parameters[1]];
-            if (!subsectionEntry) {
-                const embed = new Discord.RichEmbed({
-                    title: 'IPG - Error',
-                    description: `The section **${entry.title}** does not have a subsection with that name.`,
-                    color: 0xff0000
-                });
-                if (entry.subsections.length) {
-                    embed.addField('Available Subsections', entry.subsections.join(', '));
-                }
-                return embed;
-            }
-            return this.formatSubsectionEntry(entry, subsectionEntry);
         }
     }
 

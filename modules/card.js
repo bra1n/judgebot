@@ -137,17 +137,21 @@ class MtgCardLoader {
     generateDescriptionText(card) {
         const ptToString = (card) =>
             '**'+card.power.replace(/\*/g, '\\*') + "/" + card.toughness.replace(/\*/g, '\\*')+'**';
-        const description = [card.oracle_text];
-        if (card.type_line) {
-            description.unshift('**'+card.type_line+'** ('+card.set.toUpperCase()+' '+_.capitalize(card.rarity)+')');
+
+        const description = [];
+        if (card.type_line) { // bold type line
+            description.push('**'+card.type_line+'** ('+card.set.toUpperCase()+' '+_.capitalize(card.rarity)+')');
         }
-        if (card.flavor_text) {
+        if (card.oracle_text) { // reminder text in italics
+            description.push(card.oracle_text.replace(/[()]/g, m => m === '(' ? '*(':')*'));
+        }
+        if (card.flavor_text) { // flavor text in italics
             description.push('*' + card.flavor_text+'*');
         }
-        if (card.loyalty) {
+        if (card.loyalty) { // bold loyalty
             description.push('**Loyalty: ' + card.loyalty+'**');
         }
-        if (card.power) {
+        if (card.power) { // bold P/T
             description.push(ptToString(card));
         }
         if (card.card_faces) {
@@ -179,10 +183,19 @@ class MtgCardLoader {
                 description = this.renderEmojis(description);
             }
 
+            // footer
+            let footer = "Use !help to get a list of available commands.";
+            if(cards.length > 1) {
+                footer = (cards.length - 1) + ' other hits:\n';
+                footer += cards.slice(1,6).map(cardObj => cardObj.name).join('; ');
+                if (cards.length > 6) footer += '; ...';
+            }
+
             // instantiate embed object
             const embed = new Discord.RichEmbed({
                 title,
                 description,
+                footer: {text: footer},
                 url: card.scryfall_uri,
                 color: this.getBorderColor(card),
                 thumbnail: {url: card.image_uri}
@@ -203,19 +216,11 @@ class MtgCardLoader {
                 embed.addField('Legal in', legalities || 'Nowhere');
             }
 
-            // add footer, if needed
-            if(cards.length > 1) {
-                let footer = (cards.length - 1) + ' other hits:\n';
-                footer += cards.slice(1,6).map(cardObj => cardObj.name).join('; ');
-                if (cards.length > 6) footer += '; ...';
-                embed.setFooter(footer);
-            }
-
             // add rulings loaded from Gatherer, if needed
-            if(card.related_uris.gatherer && (command === "ruling" || command === "rulings")) {
+            if(["ruling", "rulings"].indexOf(command) > -1 && card.related_uris.gatherer) {
                 rp(card.related_uris.gatherer).then(gatherer => {
                     embed.setAuthor('Gatherer rulings for');
-                    embed.setDescription(this.parseGathererRulings(gatherer).substr(0,2048));
+                    embed.setDescription(this.parseGathererRulings(gatherer));
                     resolve(embed);
                 });
             } else {
@@ -264,7 +269,7 @@ class MtgCardLoader {
                     this.cardCache[cardName] = response;
                     this.cardCacheDict.push(cardName);
                 }
-            });
+            }, err => log.error('Scryfall API Error:', err.error.details));
         }
         return requestPromise;
     }
@@ -288,7 +293,7 @@ class MtgCardLoader {
                     if (body.data.length > 1) {
                         sentMessage.react('⬅').then(() => sentMessage.react('➡'));
                         sentMessage.createReactionCollector(
-                            ({emoji} , user) => (emoji.toString() === '⬅' || emoji.toString() === '➡') && user.id === msg.author.id,
+                            ({emoji} , user) => ['⬅','➡'].indexOf(emoji.toString()) > -1 && user.id === msg.author.id,
                             {time: 30000, max: 20}
                         ).on('collect', reaction => {
                             //reaction.remove(msg.author); // needs edit message rights

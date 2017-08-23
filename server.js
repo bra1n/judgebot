@@ -2,7 +2,6 @@ const Discord = require("discord.js");
 const request = require("request");
 const log = require("log4js").getLogger('bot');
 const _ = require("lodash");
-require('colors');
 
 log.setLevel(process.env.LOG_LEVEL || "INFO");
 
@@ -14,7 +13,8 @@ const modules = [
     'rules/cr',
     'rules/jar',
     'card',
-    'help'
+    'help',
+    'hangman'
 ];
 
 const bot = new Discord.Client();
@@ -22,33 +22,42 @@ const handlers = {};
 modules.forEach(module => {
     const moduleObject = new (require("./modules/" + module + '.js'))();
     if(moduleObject) {
-        log.info("Successfully initialized module", module.green);
+        log.info("Successfully initialized module", module);
         moduleObject.getCommands().forEach(command => {
             handlers[command] = moduleObject;
         });
     } else {
-        log.error("Couldn't initialize module", module.red);
+        log.error("Couldn't initialize module", module);
     }
 });
 
 // remember timestamps for last message per user
 const userMessageTimes = {};
 
+// generate RegExp pattern for message parsing
+// Example: ^!(card|price) ?(.*)$|!(card|price) ?([^!]*)(!|$)
+const charPattern = _.escapeRegExp(commandChar);
+const commandPattern = charPattern+'('+Object.keys(handlers).map(_.escapeRegExp).join('|')+')';
+const regExpPattern = `(\s|^)${commandPattern}( .*?)?(${charPattern}[^a-z0-9]|$)`;
+const regExpObject = new RegExp(regExpPattern, 'ig');
+
 /* Handle incoming messages */
 bot.on("message", msg => {
-    // generate RegExp pattern for message parsing
-    // Example: ^!(card|price) ?(.*)$|!(card|price) ?([^!]*)(!|$)
-    const charPattern = _.escapeRegExp(commandChar);
-    const commandPattern = charPattern+'('+Object.keys(handlers).map(_.escapeRegExp).join('|')+')';
-    const regExpPattern = `${commandPattern}( .*?)?(${charPattern}[^a-z0-9]|$)`;
-
-    const queries = msg.content.match(new RegExp(regExpPattern, 'ig')) || [];
+    const queries = msg.content.match(regExpObject) || [];
     const lastMessage = userMessageTimes[msg.author.id] || 0;
 
     // check if it's a message for us
-    if (bot.user.id === msg.author.id || // don't message yourself
-        !queries.length || // no commands entered
-        new Date().getTime() - lastMessage < spamTimeout) { // too spammy
+    if (!queries.length || // no commands entered
+        msg.author.bot || // ignore bots
+        (msg.guild && msg.guild.id === '110373943822540800') || // discord bots server with shitty rules and billions of other bots
+        bot.user.id === msg.author.id || // don't message yourself
+        new Date().getTime() - lastMessage < spamTimeout) // too spammy
+    {
+        // if the message mentions us, log it
+        if (msg.content.toLowerCase().indexOf(bot.user.username.toLowerCase()) > -1 ||
+            msg.mentions.users.has(bot.user.id)) {
+            logMessage(msg, `said about us: "${msg.content}"`);
+        }
         return;
     }
 
@@ -60,36 +69,41 @@ bot.on("message", msg => {
         const command = query.split(" ")[0].substr(commandChar.length).toLowerCase();
         const parameter = query.split(" ").slice(1).join(" ").replace(new RegExp(charPattern+'$', 'i'),'');
 
-        let logMessage = [
-            '[' + (msg.guild ? msg.guild.name.blue : 'private query') + ']',
-            msg.channel.name ? '[' + msg.channel.name + ']' : '',
-            msg.author.username.blue + '#' + msg.author.discriminator.blue,
-            'used', command.green, parameter.yellow
-        ];
-        log.info(logMessage.join(' '));
+        logMessage(msg, `used: "${command} ${parameter}"`);
         const ret = handlers[command].handleMessage(command, parameter, msg);
         // if ret is undefined or not a thenable this just returns a resolved promise and the callback won't be called
-        Promise.resolve(ret).catch(e => log.error('An error occured while handling', msg.content.green, ":", e.message));
+        Promise.resolve(ret).catch(e => log.error('An error occured while handling', msg.content, ":", e.message));
     })
 });
 
 /* Bot event listeners */
 bot.on('ready', () => {
-    log.info('Bot is ready! Username:', bot.user.username.green, 'Servers:', (bot.guilds.size + '').blue);
+    log.info('Bot is ready! Username:', bot.user.username, '/ Servers:', bot.guilds.size );
     updateServerCount();
 });
 
 bot.on('guildCreate', (guild) => {
-    log.info('I just joined a server:', guild.name.red);
+    log.info('I just joined a server:', guild.name);
     updateServerCount();
 });
 
 bot.on('guildDelete', (guild) => {
-    log.info('I just left a server:', guild.name.red);
+    log.info('I just left a server:', guild.name);
     updateServerCount();
 });
 
 bot.login(process.env.DISCORD_TOKEN);
+
+// log a message from a user / guild
+const logMessage = (msg, action) => {
+    let logMessage = [
+        '[' + (msg.guild ? msg.guild.name : 'private query') + ']',
+        msg.channel.name ? '[' + msg.channel.name + ']' : '',
+        msg.author.username + '#' + msg.author.discriminator,
+        action
+    ];
+    log.info(logMessage.join(' '));
+}
 
 // send updated stats to bots.discord.com
 const updateServerCount = () => {
@@ -103,12 +117,8 @@ const updateServerCount = () => {
     const options = {
         url: 'https://bots.discord.pw/api/bots/240537940378386442/stats',
         method: 'POST',
-        headers: {
-            'Authorization': process.env.BOT_TOKEN
-        },
-        body: {
-            "server_count": bot.guilds.size || 0
-        },
+        headers: {'Authorization': process.env.BOT_TOKEN},
+        body: {"server_count": bot.guilds.size || 0},
         json: true
     };
     if(process.env.BOT_TOKEN) {

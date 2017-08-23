@@ -23,7 +23,7 @@ class Help {
         const response = [
             '**Available commands:**',
             commands.join('\n'),
-            '\nThis judgebot is provided free of charge and can be added to your channel, too!',
+            '\nThis bot is provided free of charge and can be added to your channel, too!',
             ':link: https://bots.discord.pw/bots/240537940378386442',
             ':link: https://github.com/bra1n/judgebot'
         ].join('\n');

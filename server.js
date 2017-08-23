@@ -54,8 +54,9 @@ bot.on("message", msg => {
         new Date().getTime() - lastMessage < spamTimeout) // too spammy
     {
         // if the message mentions us, log it
-        if (msg.content.toLowerCase().indexOf(bot.user.username.toLowerCase()) > -1 ||
-            msg.mentions.users.has(bot.user.id)) {
+        if (!msg.author.bot && // don't log if we mention ourselves
+            (msg.content.toLowerCase().indexOf(bot.user.username.toLowerCase()) > -1 ||
+            msg.mentions.users.has(bot.user.id))) {
             logMessage(msg, `said about us: "${msg.content}"`);
         }
         return;

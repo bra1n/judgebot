@@ -38,7 +38,7 @@ const userMessageTimes = {};
 // Example: ^!(card|price) ?(.*)$|!(card|price) ?([^!]*)(!|$)
 const charPattern = _.escapeRegExp(commandChar);
 const commandPattern = charPattern+'('+Object.keys(handlers).map(_.escapeRegExp).join('|')+')';
-const regExpPattern = `${commandPattern}( .*?)?(${charPattern}[^a-z0-9]|$)`;
+const regExpPattern = `(\s|^)${commandPattern}( .*?)?(${charPattern}[^a-z0-9]|$)`;
 const regExpObject = new RegExp(regExpPattern, 'ig');
 
 /* Handle incoming messages */

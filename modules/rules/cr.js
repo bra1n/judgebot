@@ -94,7 +94,7 @@ class CR {
     }
 
     highlightRules(text) {
-        return text.replace(/rule \d{3}\.\w*\.?/ig, "**$&**");
+        return text.replace(/rule \d{3}\.\w*\.?/ig, "`$&`");
     }
 
     appendSubrules(parameter) {

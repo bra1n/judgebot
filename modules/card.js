@@ -269,7 +269,7 @@ class MtgCardLoader {
                     this.cardCache[cardName] = response;
                     this.cardCacheDict.push(cardName);
                 }
-            }, err => log.error('Scryfall API Error:', err.error.details));
+            }, err => log.warn('Scryfall API Error:', err.error.details));
         }
         return requestPromise;
     }
@@ -310,7 +310,7 @@ class MtgCardLoader {
                     }
                 });
             }
-        }, err => {
+        }, () => {
             return msg.channel.send('', {embed: new Discord.RichEmbed({
                 title: 'Error',
                 description: 'No cards matched `'+cardName+'`.',

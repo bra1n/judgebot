@@ -310,7 +310,7 @@ class MtgCardLoader {
                     }
                 });
             }
-        }, err => {
+        }, () => {
             return msg.channel.send('', {embed: new Discord.RichEmbed({
                 title: 'Error',
                 description: 'No cards matched `'+cardName+'`.',

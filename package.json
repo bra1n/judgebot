@@ -4,7 +4,7 @@
   "description": "discord bot for judges",
   "main": "server.js",
   "engines": {
-    "node": "6.9.1"
+    "node": "8.4.0"
   },
   "scripts": {
     "start": "node server.js",

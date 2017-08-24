@@ -38,7 +38,7 @@ const userMessageTimes = {};
 // Example: ^!(card|price) ?(.*)$|!(card|price) ?([^!]*)(!|$)
 const charPattern = _.escapeRegExp(commandChar);
 const commandPattern = charPattern+'('+Object.keys(handlers).map(_.escapeRegExp).join('|')+')';
-const regExpPattern = `(\s|^)${commandPattern}( .*?)?(${charPattern}[^a-z0-9]|$)`;
+const regExpPattern = `(\\s|^)${commandPattern}( .*?)?(${charPattern}[^a-z0-9]|$)`;
 const regExpObject = new RegExp(regExpPattern, 'ig');
 
 /* Handle incoming messages */
@@ -67,8 +67,8 @@ bot.on("message", msg => {
 
     // only use the first 3 commands in a message, ignore the rest
     queries.slice(0,3).forEach(query => {
-        const command = query.split(" ")[0].substr(commandChar.length).toLowerCase();
-        const parameter = query.split(" ").slice(1).join(" ").replace(new RegExp(charPattern+'$', 'i'),'');
+        const command = query.trim().split(" ")[0].substr(commandChar.length).toLowerCase();
+        const parameter = query.trim().split(" ").slice(1).join(" ").replace(new RegExp(charPattern+'$', 'i'),'');
 
         logMessage(msg, `used: "${command} ${parameter}"`);
         const ret = handlers[command].handleMessage(command, parameter, msg);
@@ -101,7 +101,7 @@ const logMessage = (msg, action = '') => {
         '[' + (msg.guild ? msg.guild.name : 'private query') + ']',
         msg.channel.name ? '[' + msg.channel.name + ']' : '',
         msg.author.username + '#' + msg.author.discriminator,
-        action.trim()
+        action
     ];
     log.info(logMessage.join(' '));
 }

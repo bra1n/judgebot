@@ -1,10 +1,10 @@
 const Discord = require("discord.js");
-const request = require("request");
-const log = require("log4js").getLogger('bot');
 const _ = require("lodash");
+const utils = require("./utils");
 
-log.setLevel(process.env.LOG_LEVEL || "INFO");
+const log = utils.getLogger('bot');
 
+// basic server stuff, modules to load
 const commandChar = process.env.COMMAND_CHAR || "!";
 const spamTimeout = 3000; // milliseconds
 const modules = [
@@ -17,6 +17,7 @@ const modules = [
     'hangman'
 ];
 
+// initialize the bot and all modules
 const bot = new Discord.Client();
 const handlers = {};
 modules.forEach(module => {
@@ -57,7 +58,7 @@ bot.on("message", msg => {
         if (!msg.author.bot && // don't log if we mention ourselves
             (msg.content.toLowerCase().indexOf(bot.user.username.toLowerCase()) > -1 ||
             msg.mentions.users.has(bot.user.id))) {
-            logMessage(msg, `said about us: "${msg.content}"`);
+            log.info(utils.prettyLog(msg, `[mention] ${msg.content}`));
         }
         return;
     }
@@ -70,7 +71,7 @@ bot.on("message", msg => {
         const command = query.trim().split(" ")[0].substr(commandChar.length).toLowerCase();
         const parameter = query.trim().split(" ").slice(1).join(" ").replace(new RegExp(charPattern+'$', 'i'),'');
 
-        logMessage(msg, `used: "${command} ${parameter}"`);
+        log.info(utils.prettyLog(msg, `[query] ${query.trim()}`));
         const ret = handlers[command].handleMessage(command, parameter, msg);
         // if ret is undefined or not a thenable this just returns a resolved promise and the callback won't be called
         Promise.resolve(ret).catch(e => log.error('An error occured while handling', msg.content, ":", e.message));
@@ -80,52 +81,18 @@ bot.on("message", msg => {
 /* Bot event listeners */
 bot.on('ready', () => {
     log.info('Bot is ready! Username:', bot.user.username, '/ Servers:', bot.guilds.size );
-    updateServerCount();
+    utils.updateServerCount(bot);
 });
 
 bot.on('guildCreate', (guild) => {
-    log.info('I just joined a server:', guild.name);
-    updateServerCount();
+    log.info(`[${guild.name}] Server joined`);
+    utils.updateServerCount(bot);
 });
 
 bot.on('guildDelete', (guild) => {
-    log.info('I just left a server:', guild.name);
-    updateServerCount();
+    log.info(`[${guild.name}] Server left`);
+    utils.updateServerCount(bot);
 });
 
+// start the engines!
 bot.login(process.env.DISCORD_TOKEN);
-
-// log a message from a user / guild
-const logMessage = (msg, action = '') => {
-    let logMessage = [
-        '[' + (msg.guild ? msg.guild.name : 'private query') + ']',
-        msg.channel.name ? '[' + msg.channel.name + ']' : '',
-        msg.author.username + '#' + msg.author.discriminator,
-        action
-    ];
-    log.info(logMessage.join(' '));
-}
-
-// send updated stats to bots.discord.com
-const updateServerCount = () => {
-    bot.user.setPresence({
-        game: {
-            name: 'MTG on '+ bot.guilds.size +' servers',
-            url:'https://bots.discord.pw/bots/240537940378386442'
-        }
-    });
-
-    const options = {
-        url: 'https://bots.discord.pw/api/bots/240537940378386442/stats',
-        method: 'POST',
-        headers: {'Authorization': process.env.BOT_TOKEN},
-        body: {"server_count": bot.guilds.size || 0},
-        json: true
-    };
-    if(process.env.BOT_TOKEN) {
-        request(options, (err) => {
-            if (err) log.error('Error sending stats', err);
-            else log.info('Updated bot stats');
-        });
-    }
-};

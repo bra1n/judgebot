@@ -23,7 +23,7 @@ class MtgHangman {
         const missing = _.difference(_.uniq(card.name.replace(/[^a-z]/ig,'').toLowerCase().split("")), letters);
 
         // generate embed title
-        const title = 'Guess the card: '+card.name.replace(/[a-z]/ig, c => letters.indexOf(c.toLowerCase()) < 0 ? '-':c);
+        const title = card.name.replace(/[a-z]/ig, c => letters.indexOf(c.toLowerCase()) < 0 ? '⬚':c);
         let description = "";
         // hard is without mana cost
         if(difficulty !== "hard") {
@@ -41,10 +41,13 @@ class MtgHangman {
             `  |   ${wrong > 2 ? '/':' '}${wrong > 1 ? '|':' '}${wrong > 3 ? '\\':' '}   Correct: ${Math.round(100-(wrong/(letters.length || 1))*100)}%\n` +
             `  |    ${wrong > 1 ? '|':' '}    \n` +
             `  |   ${wrong > 4 ? '/':' '} ${wrong > 5 ? '\\':' '}   \n` +
-            ' _|________```';
+            ' _|________```\n' +
+            'Use :regional_indicator_a::regional_indicator_b::regional_indicator_c: ... :regional_indicator_z: ' +
+            'reactions to pick letters.';
 
         // instantiate embed object
         const embed = new Discord.RichEmbed({
+            author: {name: "Guess the card:"},
             title,
             description,
             footer: {text: "You have "+this.gameTime/60000+" minutes to guess the card."}

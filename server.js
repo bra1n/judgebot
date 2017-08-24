@@ -96,12 +96,12 @@ bot.on('guildDelete', (guild) => {
 bot.login(process.env.DISCORD_TOKEN);
 
 // log a message from a user / guild
-const logMessage = (msg, action) => {
+const logMessage = (msg, action = '') => {
     let logMessage = [
         '[' + (msg.guild ? msg.guild.name : 'private query') + ']',
         msg.channel.name ? '[' + msg.channel.name + ']' : '',
         msg.author.username + '#' + msg.author.discriminator,
-        action
+        action.trim()
     ];
     log.info(logMessage.join(' '));
 }

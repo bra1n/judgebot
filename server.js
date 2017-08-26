@@ -1,6 +1,5 @@
 const Discord = require("discord.js");
 const _ = require("lodash");
-const colors = require("colors");
 const utils = require("./utils");
 
 const log = utils.getLogger('bot');
@@ -86,12 +85,12 @@ bot.on('ready', () => {
 });
 
 bot.on('guildCreate', (guild) => {
-    log.info(`[${guild.name}]`.blue + '[joined]'.magenta);
+    log.info(utils.prettyLog({guild}, "joined"));
     utils.updateServerCount(bot);
 });
 
 bot.on('guildDelete', (guild) => {
-    log.info(`[${guild.name}]`.blue + '[left]'.magenta);
+    log.info(utils.prettyLog({guild}, "left"));
     utils.updateServerCount(bot);
 });
 

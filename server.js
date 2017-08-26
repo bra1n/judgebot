@@ -1,5 +1,6 @@
 const Discord = require("discord.js");
 const _ = require("lodash");
+const colors = require("colors");
 const utils = require("./utils");
 
 const log = utils.getLogger('bot');
@@ -58,7 +59,7 @@ bot.on("message", msg => {
         if (!msg.author.bot && // don't log if we mention ourselves
             (msg.content.toLowerCase().indexOf(bot.user.username.toLowerCase()) > -1 ||
             msg.mentions.users.has(bot.user.id))) {
-            log.info(utils.prettyLog(msg, `[mention] ${msg.content}`));
+            log.info(utils.prettyLog(msg, 'mention', msg.content));
         }
         return;
     }
@@ -71,7 +72,7 @@ bot.on("message", msg => {
         const command = query.trim().split(" ")[0].substr(commandChar.length).toLowerCase();
         const parameter = query.trim().split(" ").slice(1).join(" ").replace(new RegExp(charPattern+'$', 'i'),'');
 
-        log.info(utils.prettyLog(msg, `[query] ${query.trim()}`));
+        log.info(utils.prettyLog(msg, 'query', query.trim()));
         const ret = handlers[command].handleMessage(command, parameter, msg);
         // if ret is undefined or not a thenable this just returns a resolved promise and the callback won't be called
         Promise.resolve(ret).catch(e => log.error('An error occured while handling', msg.content, ":", e.message));
@@ -85,12 +86,12 @@ bot.on('ready', () => {
 });
 
 bot.on('guildCreate', (guild) => {
-    log.info(`[${guild.name}] Server joined`);
+    log.info(`[${guild.name}]`.blue + '[joined]'.magenta);
     utils.updateServerCount(bot);
 });
 
 bot.on('guildDelete', (guild) => {
-    log.info(`[${guild.name}] Server left`);
+    log.info(`[${guild.name}]`.blue + '[left]'.magenta);
     utils.updateServerCount(bot);
 });
 

@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "cheerio": "0.22.0",
+    "colors": "^1.1.2",
     "discord.js": "^11.1.0",
     "lodash": "^4.16.6",
     "log4js": "^2.3.3",

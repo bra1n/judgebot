@@ -1,9 +1,10 @@
 const log4js = require("log4js");
 const request = require("request");
+const colors = require("colors");
 
 // setup logger
 const getLogger = (name) => {
-    let logPattern = '[%p] [%c] - %m';
+    let logPattern = '%[[%p]%] '+'[%c]'.red +' - %m';
     if (!process.env.PAPERTRAIL_API_TOKEN) {
         logPattern = '[%d{yy/MM/dd hh:mm:ss}] ' + logPattern;
     }
@@ -16,10 +17,11 @@ const getLogger = (name) => {
 }
 
 // create a pretty log message for a user / guild
-const prettyLog = (msg, log = '') => {
+const prettyLog = (msg, action, log = '') => {
     const logMessage = [
-        '[' + (msg.guild ? msg.guild.name : 'direct message') + (msg.channel.name ? '#'+msg.channel.name : '') +']',
-        '[' + msg.author.username + '#' + msg.author.discriminator + ']',
+        ('[' + (msg.guild ? msg.guild.name : 'direct message') + (msg.channel.name ? '#'+msg.channel.name : '') +']').blue,
+        ('[' + msg.author.username + '#' + msg.author.discriminator + ']').yellow,
+        ('[' + action + ']').magenta,
         log
     ];
     return logMessage.join(' ');

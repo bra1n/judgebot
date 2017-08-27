@@ -15,7 +15,7 @@ const modules = [
     'card',
     'help',
     'hangman',
-    'whatsInStandard'
+    'standard'
 ];
 
 // initialize the bot and all modules

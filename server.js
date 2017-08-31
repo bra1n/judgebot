@@ -14,7 +14,8 @@ const modules = [
     'rules/jar',
     'card',
     'help',
-    'hangman'
+    'hangman',
+    'standard'
 ];
 
 // initialize the bot and all modules

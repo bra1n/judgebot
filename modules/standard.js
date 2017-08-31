@@ -1,6 +1,7 @@
 const rp = require("request-promise-native");
 const _ = require("lodash");
 const Discord = require("discord.js");
+const log = require("log4js").getLogger('standard');
 
 class Standard{
 
@@ -10,7 +11,9 @@ class Standard{
         this.cachedEmbed = null;
         this.cachedTime = null;
         this.cacheExpireTime = 24*60*60*1000; //day in milliseconds
-        this.loadList()
+        this.loadList(()=>{
+           log.info("Standard is cached")
+        })
     }
 
     getCommands(){
@@ -38,24 +41,26 @@ class Standard{
         return embed;
     }
 
-    loadList(){
+    loadList(fn){
         rp({url: this.api, json:true}).then(body=>{
-            return this.generateEmbed(body);
+            fn(this.generateEmbed(body));
         },err=>{
             log.error("Error getting Standard list",err.error.details);
-            return new Discord.RichEmbed({
+            fn(new Discord.RichEmbed({
                 title: "Standard - Error",
                 description: "Couldn't create Standard list.",
                 color: 0xff0000
-            });
+            }));
         });
     }
 
     handleMessage(command, parameter, msg) {
-        if(this.cachedEmbed != null && this.cachedTime != null && new Date().getTime()-this.cachedTime<this.cacheExpireTime){
+       if(this.cachedEmbed != null && this.cachedTime != null && new Date().getTime()-this.cachedTime<this.cacheExpireTime){
             return msg.channel.send('',{embed: this.cachedEmbed});
         }
-        return msg.channel.send('',{embed: this.loadList()});
+        this.loadList(embed=>{
+            msg.channel.send('',{embed: embed});
+        });
     }
 }
 

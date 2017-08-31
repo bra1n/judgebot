@@ -11,7 +11,7 @@ class Standard{
         this.cachedEmbed = null;
         this.cachedTime = null;
         this.cacheExpireTime = 24*60*60*1000; //day in milliseconds
-        this.loadList(()=>{
+        this.loadList().then(()=>{
            log.info("Standard is cached")
         })
     }
@@ -41,24 +41,24 @@ class Standard{
         return embed;
     }
 
-    loadList(fn){
-        rp({url: this.api, json:true}).then(body=>{
-            fn(this.generateEmbed(body));
+    loadList(){
+        return rp({url: this.api, json:true}).then(body=>{
+            return this.generateEmbed(body);
         },err=>{
             log.error("Error getting Standard list",err.error.details);
-            fn(new Discord.RichEmbed({
+            return new Discord.RichEmbed({
                 title: "Standard - Error",
                 description: "Couldn't create Standard list.",
                 color: 0xff0000
-            }));
+            });
         });
     }
 
     handleMessage(command, parameter, msg) {
-       if(this.cachedEmbed != null && this.cachedTime != null && new Date().getTime()-this.cachedTime<this.cacheExpireTime){
+        if(this.cachedEmbed != null && this.cachedTime != null && new Date().getTime()-this.cachedTime<this.cacheExpireTime){
             return msg.channel.send('',{embed: this.cachedEmbed});
         }
-        this.loadList(embed=>{
+        this.loadList().then(embed=>{
             msg.channel.send('',{embed: embed});
         });
     }

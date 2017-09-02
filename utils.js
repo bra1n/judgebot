@@ -19,8 +19,8 @@ const getLogger = (name) => {
 // create a pretty log message for a user / guild
 const prettyLog = ({guild, channel = {}, author = {}}, action, log = '') => {
     const logMessage = [
-        chalk.blue('[' + (guild ? guild.name : 'direct message') + (channel.name ? '#'+channel.name : '') +']'),
-        chalk.yellow('[' + (author ? author.username + '#' + author.discriminator : 'server') + ']'),
+        chalk.blue('[' + (guild ? guild.name : 'direct message') + '#' + (channel.name || '') +']'),
+        chalk.yellow('[' + (author.username ? author.username + '#' + author.discriminator : 'server') + ']'),
         chalk.magenta('[' + action + ']'),
         log
     ];
@@ -44,7 +44,15 @@ const updateServerCount = (bot) => {
         json: true
     };
 
-    if(process.env.BOT_TOKEN) {
+    // post stats to bots.discord.pw
+    if (process.env.BOT_TOKEN) {
+        request(options);
+    }
+
+    // post stats to discordbots.org
+    if (process.env.BOT_TOKEN2) {
+        options.url = 'https://discordbots.org/api/bots/240537940378386442/stats';
+        options.headers['Authorization'] = process.env.BOT_TOKEN2;
         request(options);
     }
 };

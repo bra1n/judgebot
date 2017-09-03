@@ -1,6 +1,6 @@
 class JAR {
     constructor() {
-        this.Location = "http://blogs.magicjudges.org/rules/ipg/";
+        this.Location = "https://blogs.magicjudges.org/rules/jar/";
         this.commands = ["jar"];
     }
 
@@ -8,14 +8,7 @@ class JAR {
         return this.commands;
     }
 
-    find(parameter) {
-        //todo
-    }
-
     handleMessage(command, parameter, msg) {
-        if (parameter) {
-            return msg.channel.send(this.find(parameter));
-        }
         return msg.channel.send('**Judging at Regular**: <' + this.Location + '>');
     }
 }

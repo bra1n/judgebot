@@ -32,7 +32,7 @@ const updateServerCount = (bot) => {
     bot.user.setPresence({
         game: {
             name: 'MTG on '+ bot.guilds.size +' servers',
-            url:'https://bots.discord.pw/bots/240537940378386442'
+            url: 'https://github.com/bra1n/judgebot'
         }
     });
 

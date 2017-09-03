@@ -110,39 +110,43 @@ class CR {
 
     handleMessage(command, parameter, msg) {
         // use only the first parameter
-        let cleanParam = parameter.trim().split(" ")[0].replace(/\.$/, "").toLowerCase();
-        // in case there is a second parameter "ex", append it too
-        if (parameter.toLowerCase().split(" ")[1] == "ex") cleanParam += ' ex';
+        let params = parameter.trim().toLowerCase().split(" ").map(p => p.replace(/\.$/, ""));
 
-        if (command === "cr" || command === "rule") {
-            const embed = new Discord.RichEmbed({
-                title: 'Comprehensive Rules',
-                description: 'Effective '+this.crData.description,
-                thumbnail: {url: this.thumbnail},
-                url: this.location + '/'
-            });
-            if (cleanParam && this.crData[cleanParam]) {
-                embed.setTitle('CR - Rule '+cleanParam.replace(/ ex$/,' Examples'));
-                embed.setDescription(_.truncate(this.appendSubrules(cleanParam), {length: this.maxLength, separator: '\n'}));
-                embed.setURL(this.location + cleanParam.substr(0,3) + '/');
-                if (this.crData[cleanParam + ' ex']) {
-                    embed.setFooter('Use "!cr '+cleanParam+' ex" to see examples.');
+        // prepare embed
+        const embed = new Discord.RichEmbed({
+            title: 'Comprehensive Rules',
+            description: 'Effective '+this.crData.description,
+            thumbnail: {url: this.thumbnail},
+            url: this.location + '/'
+        });
+
+        // check first for CR paragraph match
+        if (params[0] && this.crData[params[0]]) {
+            // in case there is a second parameter "ex", append it
+            if (params[1] === "ex") params[0] += ' ex';
+            embed.setTitle('CR - Rule ' + params[0].replace(/ ex$/,' Examples'));
+            embed.setDescription(_.truncate(this.appendSubrules(params[0]), {length: this.maxLength, separator: '\n'}));
+            embed.setURL(this.location + params[0].substr(0,3) + '/');
+            if (this.crData[params[0] + ' ex']) {
+                embed.setFooter('Use "!cr '+params[0]+' ex" to see examples.');
+            }
+        } else {
+            // try to find a match in the glossary while stripping of parameters until there are none left or they match
+            while (params.length) {
+                if (this.glossary[params.join(" ")]) {
+                    embed.setTitle('CR - Glossary for "'+params.join(" ")+'"');
+                    embed.setDescription(this.glossary[params.join(" ")]);
+                    embed.setURL(this.location + '/cr-glossary/');
+                    const rule = this.glossary[params.join(" ")].match(/rule (\d+\.\w+)/i);
+                    if (rule && this.crData[rule[1]]) {
+                        embed.addField('CR - Rule '+rule[1], _.truncate(this.appendSubrules(rule[1]), {length: 1020, separator: '\n'}));
+                    }
+                    break;
                 }
+                params.pop();
             }
-            return msg.channel.send('', {embed});
-        } else if (command === "define" && cleanParam && this.glossary[cleanParam]) {
-            const embed = new Discord.RichEmbed({
-                title: 'CR - Glossary for "'+cleanParam+'"',
-                description: this.glossary[cleanParam],
-                thumbnail: {url: this.thumbnail},
-                url: this.location + '/cr-glossary/'
-            });
-            const rule = this.glossary[cleanParam].match(/rule (\d+\.\w+)/i);
-            if (rule && this.crData[rule[1]]) {
-                embed.addField('CR - Rule '+rule[1], _.truncate(this.appendSubrules(rule[1]), {length: 1020, separator: '\n'}));
-            }
-            return msg.channel.send('', {embed});
         }
+        return msg.channel.send('', {embed});
     }
 }
 

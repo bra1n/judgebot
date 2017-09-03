@@ -8,8 +8,15 @@ const CR_ADDRESS = process.env.CR_ADDRESS || "https://sites.google.com/site/mtgf
 
 class CR {
     constructor() {
+        this.commands = {
+            cr: {
+                aliases: ["define", "rule"],
+                description: "Show a rule or definition from the Comprehensive Rulebook",
+                help: "This command can be used to look up rules (including subrules and examples), as well as Glossary definitions from the Comprehensive Rulebook.",
+                examples: ["!cr 508.1d", "!rule 702.15", "!define lifelink"]
+            }
+        };
         this.location = "http://blogs.magicjudges.org/rules/cr";
-        this.commands = ["define", "cr", "rule"];
         this.glossary = {};
         this.thumbnail = 'https://assets.magicjudges.org/judge-banner/images/magic-judge.png';
         this.crData = {};
@@ -97,7 +104,7 @@ class CR {
         return text.replace(/rule \d{3}\.\w*\.?/ig, "`$&`");
     }
 
-    appendSubrules(parameter) {
+    appendSubrules(parameter, length = this.maxLength) {
         let description = this.crData[parameter];
         if (description && this.crData[parameter + 'a']) {
             // keep looking for subrules, starting with "123a" and going until "123z" or we don't find another subrule
@@ -105,7 +112,7 @@ class CR {
                 description += '\n' + this.crData[parameter + String.fromCharCode(x)];
             }
         }
-        return description;
+        return _.truncate(description, {length, separator: '\n'});
     }
 
     handleMessage(command, parameter, msg) {
@@ -124,26 +131,25 @@ class CR {
         if (params[0] && this.crData[params[0]]) {
             // in case there is a second parameter "ex", append it
             if (params[1] === "ex") params[0] += ' ex';
-            embed.setTitle('CR - Rule ' + params[0].replace(/ ex$/,' Examples'));
-            embed.setDescription(_.truncate(this.appendSubrules(params[0]), {length: this.maxLength, separator: '\n'}));
-            embed.setURL(this.location + params[0].substr(0,3) + '/');
+            embed.setTitle('CR - Rule ' + params[0].replace(/ ex$/,' Examples'))
+                .setDescription(this.appendSubrules(params[0]))
+                .setURL(this.location + params[0].substr(0,3) + '/');
             if (this.crData[params[0] + ' ex']) {
-                embed.setFooter('Use "!cr '+params[0]+' ex" to see examples.');
+                embed.setFooter('Use "!'+Object.keys(this.commands)[0]+' '+params[0]+' ex" to see examples.');
             }
         } else {
             // try to find a match in the glossary while stripping of parameters until there are none left or they match
-            while (params.length) {
+            for (;params.length;params.pop()) {
                 if (this.glossary[params.join(" ")]) {
-                    embed.setTitle('CR - Glossary for "'+params.join(" ")+'"');
-                    embed.setDescription(this.glossary[params.join(" ")]);
-                    embed.setURL(this.location + '/cr-glossary/');
+                    embed.setTitle('CR - Glossary for "'+params.join(" ")+'"')
+                        .setDescription(this.glossary[params.join(" ")])
+                        .setURL(this.location + '/cr-glossary/');
                     const rule = this.glossary[params.join(" ")].match(/rule (\d+\.\w+)/i);
                     if (rule && this.crData[rule[1]]) {
-                        embed.addField('CR - Rule '+rule[1], _.truncate(this.appendSubrules(rule[1]), {length: 1020, separator: '\n'}));
+                        embed.addField('CR - Rule '+rule[1], this.appendSubrules(rule[1], 1020));
                     }
                     break;
                 }
-                params.pop();
             }
         }
         return msg.channel.send('', {embed});

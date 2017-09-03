@@ -7,7 +7,14 @@ class Standard{
 
     constructor(){
         this.api = "http://whatsinstandard.com/api/4/sets.json";
-        this.commands = ["standard"];
+        this.commands = {
+            standard: {
+                aliases: [],
+                description: "Lists the currently standard legal sets and when they will rotate",
+                help: '',
+                examples: ["!standard"]
+            }
+        };
         this.cachedEmbed = null;
         this.cachedTime = null;
         this.cacheExpireTime = 24*60*60*1000; //day in milliseconds

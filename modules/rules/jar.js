@@ -5,7 +5,8 @@ class JAR {
             jar: {
                 aliases: [],
                 description: "Show the link to the Judging at Regular document (this feature is WIP)",
-                help: '',
+                help: 'This command currently only returns the link to the JAR document, but will contain the whole ' +
+                'document in the near future.',
                 examples: ["!jar"]
             }
         };

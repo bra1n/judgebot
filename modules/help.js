@@ -41,7 +41,7 @@ class Help {
             embed.setTitle('Command "!'+parameter+'"');
             embed.setDescription(commands[parameter].help);
             embed.addField('Examples', '`' + commands[parameter].examples.join('`\n`') + '`', true)
-            if (commands[parameter].aliases.length) {
+            if (commands[parameter].aliases && commands[parameter].aliases.length) {
                 embed.addField('Aliases', '`!' + commands[parameter].aliases.join('`\n`!') + '`', true);
             }
         } else {

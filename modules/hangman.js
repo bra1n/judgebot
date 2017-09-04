@@ -2,11 +2,27 @@ const rp = require("request-promise-native");
 const _ = require("lodash");
 const Discord = require("discord.js");
 const log = require("log4js").getLogger('hangman');
-const cardFetcher = new (require("./card"))();
+const Card = require("./card");
+const cardFetcher = new Card();
 
 class MtgHangman {
     constructor() {
-        this.commands = ["hangman"];
+        this.commands = {
+            hangman: {
+                aliases: [],
+                description: 'Start a game of hangman, where you have to guess the card namen with reaction letters',
+                help: 'Selects a random Magic card, token oder plane and shows you the ' +
+                'placeholders for each letter in its name. To guess a letter, add a reaction to the ' +
+                'Hangman-message of the bot. Reactions have to be selected among the regional indicators ' +
+                ':regional_indicator_a: to :regional_indicator_z:. You can only have one active game of ' +
+                'Hangman per Discord server, but you can also start an additional one in a private query.\n\n' +
+                '**Difficulty**:\n' +
+                'With an optional parameter you can select the difficulty. Available are `easy`, `medium` ' +
+                'and `hard`. Default is medium. "Easy" includes the mana cost and type line, "Medium" includes ' +
+                'the mana cost and "Hard" doesn\'t include any hints.',
+                examples: ["!hangman", "!hangman easy"]
+            }
+        };
         this.cardApi = "https://api.scryfall.com/cards/random";
         this.gameTime = 3*60*1000; // minutes
         this.runningGames = [];

@@ -122,7 +122,7 @@ class MtgHangman {
                         }
                     }).on('end', (collected, reason) => {
                         // game is already over, don't edit message again
-                        if (reason != "finished") {
+                        if (reason !== "finished") {
                             sentMessage.edit('', {embed: this.generateEmbed(body, difficulty, letters, true)});
                         }
                         // remove guild / author ID from running games
@@ -132,6 +132,11 @@ class MtgHangman {
             }
         }, err => {
             log.error("Error getting random card from API", err.error.details);
+            msg.channel.send('', {embed: new Discord.RichEmbed({
+                title: "Error",
+                description: "Scryfall is currently offline and can't generate us a random card, please try again later.",
+                color: 0xff0000
+            })});
             _.pull(this.runningGames, id);
         });
     }

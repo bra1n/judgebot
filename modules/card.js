@@ -335,10 +335,14 @@ class MtgCardLoader {
                     }
                 });
             }
-        }, () => {
+        }, (err) => {
+            let description = 'No cards matched `'+cardName+'`.';
+            if (err.statusCode === 503) {
+                description = 'Scryfall is currently offline, please try again later.'
+            }
             return msg.channel.send('', {embed: new Discord.RichEmbed({
                 title: 'Error',
-                description: 'No cards matched `'+cardName+'`.',
+                description,
                 color: 0xff0000
             })});
         });

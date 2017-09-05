@@ -10,7 +10,14 @@ class IPG {
     constructor(initialize = true) {
         this.location = "http://blogs.magicjudges.org/rules/ipg";
         this.maxLength = 2040;
-        this.commands = ["ipg"];
+        this.commands = {
+            ipg: {
+                aliases: [],
+                description: "Show an entry from the Infraction Procedure Guide",
+                help: '',
+                examples: ["!ipg 4.2", "!ipg grv", "!ipg hce examples"]
+            }
+        };
         this.ipgData = {};
         this.thumbnail = 'https://assets.magicjudges.org/judge-banner/images/magic-judge.png';
         this.aliases = {

@@ -7,7 +7,18 @@ class Standard{
 
     constructor(){
         this.api = "http://whatsinstandard.com/api/4/sets.json";
-        this.commands = ["standard"];
+        this.commands = {
+            standard: {
+                aliases: [],
+                description: "Lists the currently standard legal sets and when they will rotate",
+                help: 'Standard is a rotating group of Magic: The Gathering sets. Most sets enter Standard when ' +
+                'they\'re released and drop out about eighteen months later. (Masters sets never enter Standard.1)\n\n' +
+                'A Standard card is a card printed or reprinted into a set currently in Standard. \n\n' +
+                'A deck which contains only Standard cards is called a Standard deck.\n\n' +
+                'From :link: http://whatsinstandard.com/',
+                examples: ["!standard"]
+            }
+        };
         this.cachedEmbed = null;
         this.cachedTime = null;
         this.cacheExpireTime = 24*60*60*1000; //day in milliseconds

@@ -6,7 +6,32 @@ const cheerio = require("cheerio");
 
 class MtgCardLoader {
     constructor() {
-        this.commands = ["card", "price", "rulings", "ruling", "legal"];
+        this.commands = {
+            card: {
+                aliases: [],
+                description: "Search for an English Magic card by (partial) name, supports full Scryfall syntax",
+                help: '',
+                examples: ["!card iona", "!card t:creature o:flying", "!card goyf e:fut"]
+            },
+            price: {
+                aliases: ["prices"],
+                description: "Show the price in USD, EUR and TIX for a card",
+                help: '',
+                examples: ["!price tarmogoyf"]
+            },
+            ruling: {
+                aliases: ["rulings"],
+                description: "Show the Gatherer rulings for a card",
+                help: '',
+                examples: ["!ruling sylvan library"]
+            },
+            legal: {
+                aliases: ["legality"],
+                description: "Show the format legality for a card",
+                help: '',
+                examples: ["!legal divining top"]
+            }
+        };
         this.cardApi = "https://api.scryfall.com/cards/search?q=";
         // Discord bots can use custom emojis globally, so we just reference these Manamoji through their code / ID
         // (currently hosted on the Judgebot testing discord)
@@ -202,7 +227,7 @@ class MtgCardLoader {
             });
 
             // add pricing, if requested
-            if (command === 'price') {
+            if (command.match(/^price/)) {
                 let prices = [];
                 if(card.usd) prices.push('$' + card.usd);
                 if(card.eur) prices.push(card.eur + '€');
@@ -211,13 +236,13 @@ class MtgCardLoader {
             }
 
             // add legalities, if requested
-            if (command === 'legal') {
+            if (command.match(/^legal/)) {
                 const legalities = (_.invertBy(card.legalities).legal || []).map(_.capitalize).join(', ');
                 embed.addField('Legal in', legalities || 'Nowhere');
             }
 
             // add rulings loaded from Gatherer, if needed
-            if(["ruling", "rulings"].indexOf(command) > -1 && card.related_uris.gatherer) {
+            if(command.match(/^ruling/) && card.related_uris.gatherer) {
                 rp(card.related_uris.gatherer).then(gatherer => {
                     embed.setAuthor('Gatherer rulings for');
                     embed.setDescription(this.parseGathererRulings(gatherer));

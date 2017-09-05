@@ -10,7 +10,14 @@ class MTR {
     constructor(initialize = true) {
         this.location = 'http://blogs.magicjudges.org/rules/mtr';
         this.maxLength = 2040;
-        this.commands = ['mtr'];
+        this.commands = {
+            mtr: {
+                aliases: [],
+                description: "Show an entry from Magic: The Gathering Tournament Rules",
+                help: '',
+                examples: ["!mtr 2", "!mtr 4.2"]
+            }
+        };
         this.thumbnail = 'https://assets.magicjudges.org/judge-banner/images/magic-judge.png';
         this.mtrData = {
             description: '',

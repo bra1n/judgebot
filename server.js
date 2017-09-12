@@ -75,9 +75,9 @@ bot.on("message", msg => {
         // only use the first 3 commands in a message, ignore the rest
         queries.slice(0, 3).forEach(query => {
             const command = query.trim().split(" ")[0].substr(commandChar.length).toLowerCase();
-            const parameter = query.trim().split(" ").slice(1).join(" ").replace(new RegExp(charPattern + '$', 'i'), '');
+            const parameter = query.trim().split(" ").slice(1).join(" ").replace(new RegExp(charPattern + '[^a-z0-9]?$', 'i'), '');
 
-            log.info(utils.prettyLog(msg, 'query', query.trim()));
+            log.info(utils.prettyLog(msg, 'query', (command+' '+parameter).trim()));
             const ret = handlers[command].handleMessage(command, parameter, msg);
             // if ret is undefined or not a thenable this just returns a resolved promise and the callback won't be called
             Promise.resolve(ret).catch(e => log.error('An error occured while handling', msg.content, ":", e.message));

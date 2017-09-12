@@ -9,24 +9,28 @@ class MtgCardLoader {
         this.commands = {
             card: {
                 aliases: [],
+                inline: true,
                 description: "Search for an English Magic card by (partial) name, supports full Scryfall syntax",
                 help: '',
                 examples: ["!card iona", "!card t:creature o:flying", "!card goyf e:fut"]
             },
             price: {
                 aliases: ["prices"],
+                inline: true,
                 description: "Show the price in USD, EUR and TIX for a card",
                 help: '',
                 examples: ["!price tarmogoyf"]
             },
             ruling: {
                 aliases: ["rulings"],
+                inline: true,
                 description: "Show the Gatherer rulings for a card",
                 help: '',
                 examples: ["!ruling sylvan library"]
             },
             legal: {
                 aliases: ["legality"],
+                inline: true,
                 description: "Show the format legality for a card",
                 help: '',
                 examples: ["!legal divining top"]

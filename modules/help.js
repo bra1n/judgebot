@@ -6,6 +6,7 @@ class Help {
         this.commands = {
             help: {
                 aliases: [],
+                inline: false,
                 description: "Show this help text",
                 help: 'This command allows you to explore the different functions and ' +
                     'features of your beloved judgebot. You can look up detailed descriptions ' +

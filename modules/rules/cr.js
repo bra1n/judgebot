@@ -11,6 +11,7 @@ class CR {
         this.commands = {
             cr: {
                 aliases: ["define", "rule"],
+                inline: true,
                 description: "Show a rule or definition from the Comprehensive Rulebook",
                 help: "This command can be used to look up rules (including subrules and examples), as well as Glossary definitions from the Comprehensive Rulebook.",
                 examples: ["!cr 508.1d", "!rule 702.15", "!define lifelink"]

@@ -21,6 +21,8 @@ const modules = [
 // initialize the bot and all modules
 const bot = new Discord.Client();
 const handlers = {};
+const commands = {};
+
 modules.forEach((module, index) => {
     // eslint-disable-line global-require
     const moduleObject = new (require("./modules/" + module + '.js'))(modules);
@@ -29,10 +31,12 @@ modules.forEach((module, index) => {
         modules[index] = moduleObject;
         _.forEach(moduleObject.getCommands(), (commandObj, command) => {
             handlers[command] = moduleObject;
+            commands[command] = commandObj;
             // map aliases to handlers as well
             if (commandObj.aliases) {
                 commandObj.aliases.forEach(alias => {
-                    handlers[alias] = moduleObject
+                    handlers[alias] = moduleObject;
+                    commands[alias] = commandObj;
                 });
             }
         });
@@ -45,10 +49,15 @@ modules.forEach((module, index) => {
 const userMessageTimes = {};
 
 // generate RegExp pattern for message parsing
-// Example: ^!(card|price) ?(.*)$|!(card|price) ?([^!]*)(!|$)
+// Example: ((^|\s)!(card|price|mtr)|^!(hangman|standard|jar|help))( .*?)?(![^a-z0-9]|$)
 const charPattern = _.escapeRegExp(commandChar);
-const commandPattern = charPattern+'('+Object.keys(handlers).map(_.escapeRegExp).join('|')+')';
-const regExpPattern = `(\\s|^)${commandPattern}( .*?)?(${charPattern}[^a-z0-9]|$)`;
+// split inline and non-inline commands into 2 patterns
+const commandPattern = '(^|\\s)' + charPattern + '(' +
+    Object.keys(commands).filter(cmd => commands[cmd].inline).map(_.escapeRegExp).join('|')
+    + ')|^' + charPattern + '(' +
+    Object.keys(commands).filter(cmd => !commands[cmd].inline).map(_.escapeRegExp).join('|')
+    + ')';
+const regExpPattern = `(${commandPattern})( .*?)?(${charPattern}[^a-z0-9]|$)`;
 const regExpObject = new RegExp(regExpPattern, 'ig');
 
 /* Handle incoming messages */

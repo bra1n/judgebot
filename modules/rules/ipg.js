@@ -13,6 +13,7 @@ class IPG {
         this.commands = {
             ipg: {
                 aliases: [],
+                inline: true,
                 description: "Show an entry from the Infraction Procedure Guide",
                 help: '',
                 examples: ["!ipg 4.2", "!ipg grv", "!ipg hce examples"]

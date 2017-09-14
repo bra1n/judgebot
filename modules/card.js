@@ -9,24 +9,28 @@ class MtgCardLoader {
         this.commands = {
             card: {
                 aliases: [],
+                inline: true,
                 description: "Search for an English Magic card by (partial) name, supports full Scryfall syntax",
                 help: '',
                 examples: ["!card iona", "!card t:creature o:flying", "!card goyf e:fut"]
             },
             price: {
                 aliases: ["prices"],
+                inline: true,
                 description: "Show the price in USD, EUR and TIX for a card",
                 help: '',
                 examples: ["!price tarmogoyf"]
             },
             ruling: {
                 aliases: ["rulings"],
+                inline: true,
                 description: "Show the Gatherer rulings for a card",
                 help: '',
                 examples: ["!ruling sylvan library"]
             },
             legal: {
                 aliases: ["legality"],
+                inline: true,
                 description: "Show the format legality for a card",
                 help: '',
                 examples: ["!legal divining top"]
@@ -134,8 +138,8 @@ class MtgCardLoader {
         let color;
         if (card.colors.length === 0) {
             color = this.colors.NONE;
-            if (card.type_line.match(/artifact/i)) color = this.colors.ARTIFACT;
-            if (card.type_line.match(/land/i)) color = this.colors.LAND;
+            if (card.type_line && card.type_line.match(/artifact/i)) color = this.colors.ARTIFACT;
+            if (card.type_line && card.type_line.match(/land/i)) color = this.colors.LAND;
         } else if (card.colors.length > 1) {
             color = this.colors.GOLD;
         } else {
@@ -313,7 +317,7 @@ class MtgCardLoader {
                 // generate embed
                 this.generateEmbed(body.data, command, permission).then(embed => {
                     return msg.channel.send('', {embed});
-                }).then(sentMessage => {
+                }, () => {}).then(sentMessage => {
                     // if multiple results, add reactions
                     if (body.data.length > 1) {
                         sentMessage.react('⬅').then(() => sentMessage.react('➡'));
@@ -333,7 +337,7 @@ class MtgCardLoader {
                             });
                         });
                     }
-                });
+                }, () => {});
             }
         }, (err) => {
             let description = 'No cards matched `'+cardName+'`.';

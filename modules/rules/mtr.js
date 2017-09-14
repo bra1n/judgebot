@@ -13,6 +13,7 @@ class MTR {
         this.commands = {
             mtr: {
                 aliases: [],
+                inline: true,
                 description: "Show an entry from Magic: The Gathering Tournament Rules",
                 help: '',
                 examples: ["!mtr 2", "!mtr 4.2"]

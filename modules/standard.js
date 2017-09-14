@@ -10,6 +10,7 @@ class Standard{
         this.commands = {
             standard: {
                 aliases: [],
+                inline: false,
                 description: "Lists the currently standard legal sets and when they will rotate",
                 help: 'Standard is a rotating group of Magic: The Gathering sets. Most sets enter Standard when ' +
                 'they\'re released and drop out about eighteen months later. (Masters sets never enter Standard.1)\n\n' +

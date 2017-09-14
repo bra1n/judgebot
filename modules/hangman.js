@@ -10,6 +10,7 @@ class MtgHangman {
         this.commands = {
             hangman: {
                 aliases: [],
+                inline: false,
                 description: 'Start a game of hangman, where you have to guess the card namen with reaction letters',
                 help: 'Selects a random Magic card, token oder plane and shows you the ' +
                 'placeholders for each letter in its name. To guess a letter, add a reaction to the ' +

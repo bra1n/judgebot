@@ -287,7 +287,7 @@ class MtgCardLoader {
         if (this.cardCache[cardName]) {
             requestPromise = new Promise(resolve => resolve(this.cardCache[cardName]));
         } else {
-            requestPromise = rp({url: this.cardApi + cardName, json: true});
+            requestPromise = rp({url: this.cardApi + encodeURIComponent(cardName + ' include=extras'), json: true});
             requestPromise.then(response => {
                 if (response.data) {
                     // if cache is too big, remove the oldest entry

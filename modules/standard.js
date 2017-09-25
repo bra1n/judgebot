@@ -3,9 +3,9 @@ const _ = require("lodash");
 const Discord = require("discord.js");
 const log = require("log4js").getLogger("standard");
 
-class Standard{
+class Standard {
 
-    constructor(){
+    constructor() {
         this.api = "http://whatsinstandard.com/api/4/sets.json";
         this.commands = {
             standard: {
@@ -22,42 +22,46 @@ class Standard{
         };
         this.cachedEmbed = null;
         this.cachedTime = null;
-        this.cacheExpireTime = 24*60*60*1000; //day in milliseconds
-        this.loadList().then(()=>{
-           log.info("Standard is cached");
+        this.cacheExpireTime = 24 * 60 * 60 * 1000; //day in milliseconds
+        this.loadList().then(() => {
+            log.info("Standard is cached");
         });
     }
 
-    getCommands(){
+    getCommands() {
         return this.commands;
     }
 
-    generateEmbed(setList){
+    generateEmbed(setList) {
         const currentDate = new Date();
-        const removedFutureSetList = setList.filter(set=>{
+        const removedFutureSetList = setList.filter(set => {
             const releaseDate = new Date(set.enter_date);
-            return currentDate.getTime()>=releaseDate.getTime();
+            return currentDate.getTime() >= releaseDate.getTime();
         });
-        const groupedSetList = _.groupBy(removedFutureSetList,"rough_exit_date");
+        const groupedSetList = _.groupBy(removedFutureSetList, "rough_exit_date");
         const descriptions = [];
-        _.forEach(groupedSetList,(value,key)=>{
-            descriptions.push("*Rotates ",key,":*```",value.map(set=>set.name).join(" | "),"```\n");
+        _.forEach(groupedSetList, (value, key) => {
+            descriptions.push("*Rotates ", key, ":*```", value.map(set => set.name).join(" | "), "```\n");
         });
         const embed = new Discord.RichEmbed({
             title: "Currently in Standard",
-            url:"http://whatsinstandard.com/",
-            description:descriptions.join("")
+            url: "http://whatsinstandard.com/",
+            description: descriptions.join("")
         });
-        this.cachedEmbed=embed;
-        this.cachedTime=currentDate.getTime();
+        this.cachedEmbed = embed;
+        this.cachedTime = currentDate.getTime();
         return embed;
     }
 
-    loadList(){
-        return rp({url: this.api, json:true}).then(body=>{
-            return this.generateEmbed(body);
-        },err=>{
-            log.error("Error getting Standard list",err.error.details);
+    loadList() {
+        return rp({url: this.api, json: true}).then(body => {
+            if (typeof body !== "object") {
+                return null;
+            } else {
+                return this.generateEmbed(body);
+            }
+        }, err => {
+            log.error("Error getting Standard list", err.error.details);
             return new Discord.RichEmbed({
                 title: "Standard - Error",
                 description: "Couldn't create Standard list.",
@@ -67,11 +71,11 @@ class Standard{
     }
 
     handleMessage(command, parameter, msg) {
-        if(this.cachedEmbed !== null && this.cachedTime !== null && new Date().getTime()-this.cachedTime<this.cacheExpireTime){
-            return msg.channel.send("",{embed: this.cachedEmbed});
+        if (this.cachedEmbed !== null && this.cachedTime !== null && new Date().getTime() - this.cachedTime < this.cacheExpireTime) {
+            return msg.channel.send("", {embed: this.cachedEmbed});
         }
-        this.loadList().then(embed=>{
-            msg.channel.send("",{embed: embed});
+        this.loadList().then(embed => {
+            msg.channel.send("", {embed: embed});
         });
     }
 }

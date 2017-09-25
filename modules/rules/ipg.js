@@ -235,7 +235,7 @@ class IPG {
             description: _.truncate(subsectionEntry.text.join("\n\n"),{length: this.maxLength, separator: '\n'}),
             thumbnail: {url: this.thumbnail},
             footer: {text: `Other available subsections: ${otherSections.join(', ')}`},
-            url: sectionEntry.url + '#' + subsectionEntry.title.toLowerCase()
+            url: sectionEntry.url + '#' + subsectionEntry.title.toLowerCase().replace(/ /g,'-')
         });
     }
 

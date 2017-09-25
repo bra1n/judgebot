@@ -136,7 +136,7 @@ class MtgCardLoader {
     // determine embed border color
     getBorderColor(card) {
         let color;
-        if (card.colors.length === 0) {
+        if (!card.colors || card.colors.length === 0) {
             color = this.colors.NONE;
             if (card.type_line && card.type_line.match(/artifact/i)) color = this.colors.ARTIFACT;
             if (card.type_line && card.type_line.match(/land/i)) color = this.colors.LAND;
@@ -187,7 +187,7 @@ class MtgCardLoader {
             // split cards are special
             card.card_faces.forEach(face => {
                 description.push('**'+face.type_line+'**');
-                description.push(face.oracle_text);
+                description.push(face.oracle_text.replace(/[()]/g, m => m === '(' ? '*(':')*'));
                 if (face.power) {
                     description.push(ptToString(face));
                 }
@@ -203,7 +203,16 @@ class MtgCardLoader {
             const card = cards[0];
 
             // generate embed title and description text
-            let title = card.name + ' ' + card.mana_cost;
+            let title = card.name;
+
+            if (card.mana_cost) {
+                title += ' ' + card.mana_cost;
+            }
+
+            if (card.layout === 'transform' && card.card_faces && card.card_faces[0].mana_cost) {
+                title += ' ' + card.card_faces[0].mana_cost;
+            }
+
             let description = this.generateDescriptionText(card);
 
             // are we allowed to use custom emojis? cool, then do so, but make sure the title still fits
@@ -226,7 +235,7 @@ class MtgCardLoader {
                 description,
                 footer: {text: footer},
                 url: card.scryfall_uri,
-                color: this.getBorderColor(card),
+                color: this.getBorderColor(card.layout === 'transform' ? card.card_faces[0]:card),
                 thumbnail: {url: card.image_uri}
             });
 
@@ -287,7 +296,7 @@ class MtgCardLoader {
         if (this.cardCache[cardName]) {
             requestPromise = new Promise(resolve => resolve(this.cardCache[cardName]));
         } else {
-            requestPromise = rp({url: this.cardApi + encodeURIComponent(cardName + ' include=extras'), json: true});
+            requestPromise = rp({url: this.cardApi + encodeURIComponent(cardName + ' include:extras'), json: true});
             requestPromise.then(response => {
                 if (response.data) {
                     // if cache is too big, remove the oldest entry
@@ -317,7 +326,7 @@ class MtgCardLoader {
                 // generate embed
                 this.generateEmbed(body.data, command, permission).then(embed => {
                     return msg.channel.send('', {embed});
-                }, () => {}).then(sentMessage => {
+                }, err => log.error(err)).then(sentMessage => {
                     // if multiple results, add reactions
                     if (body.data.length > 1) {
                         sentMessage.react('⬅').then(() => sentMessage.react('➡'));
@@ -337,7 +346,7 @@ class MtgCardLoader {
                             });
                         });
                     }
-                }, () => {});
+                }, err => log.error(err));
             }
         }, (err) => {
             let description = 'No cards matched `'+cardName+'`.';

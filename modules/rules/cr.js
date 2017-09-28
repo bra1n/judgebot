@@ -56,11 +56,11 @@ class CR {
             if (!entry.trim()) {
                 continue;
             }
-            let [term, definition] = entry.split("\n", 2);
-            if (!term || !definition) {
+            let [term, ...definition] = entry.split("\n");
+            if (!term || !definition.length) {
                 continue;
             }
-            definition = `**${term}**\n${this.highlightRules(definition)}`;
+            definition = `**${term}**\n${this.highlightRules(definition.join("\n"))}`;
             for (const t of term.split(",")) {
                 glossaryEntries[t.trim().toLowerCase()] = definition;
             }

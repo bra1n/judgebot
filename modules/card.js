@@ -245,7 +245,7 @@ class MtgCardLoader {
                 if(card.usd) prices.push('$' + card.usd);
                 if(card.eur) prices.push(card.eur + '€');
                 if(card.tix) prices.push(card.tix + ' Tix');
-                embed.addField('Prices', prices.join(' / '));
+                embed.addField('Prices', prices.join(' / ') || 'No prices found');
             }
 
             // add legalities, if requested

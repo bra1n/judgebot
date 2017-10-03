@@ -187,7 +187,9 @@ class MtgCardLoader {
             // split cards are special
             card.card_faces.forEach(face => {
                 description.push('**'+face.type_line+'**');
-                description.push(face.oracle_text.replace(/[()]/g, m => m === '(' ? '*(':')*'));
+                if (face.oracle_text) {
+                    description.push(face.oracle_text.replace(/[()]/g, m => m === '(' ? '*(':')*'));
+                }
                 if (face.power) {
                     description.push(ptToString(face));
                 }

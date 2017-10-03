@@ -3,7 +3,7 @@
 
 Discord Bot for Magic / Judge related content
 
-[Add the bot to your server](https://discordapp.com/oauth2/authorize?client_id=240537940378386442&scope=bot)
+[Add the bot to your server](https://discordapp.com/oauth2/authorize?client_id=240537940378386442&scope=bot&permissions=314432)
 
 ## Setup
 

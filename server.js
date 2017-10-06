@@ -15,7 +15,8 @@ const modules = [
     'rules/ipg',
     'rules/mtr',
     'rules/jar',
-    'help'
+    'help',
+    'locate'
 ];
 
 // initialize the bot and all modules

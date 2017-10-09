@@ -27,9 +27,9 @@ class Locate{
         return this.commands;
     }
 
-    static generateRequestBody(bounds){
-        return {
-            count: 5,
+    generateRequestBody(geometry){
+        let requestBody = {
+            count: 9,
             filter_mass_markets: true,
             language: "en-us",
             page: 1,
@@ -41,16 +41,24 @@ class Locate{
                 PlayFormatCodes: [],
                 MarketingProgramCodes: [],
                 ProductLineCodes: ["MG"],
-                SalesBrandCodes: ["MG"],
-                North: bounds.northeast.lat,
-                East: bounds.northeast.lng,
-                South: bounds.southwest.lat,
-                West: bounds.southwest.lng
+                SalesBrandCodes: ["MG"]
             }
         };
+        if(geometry.bounds){
+            requestBody.request.North = geometry.bounds.northeast.lat;
+            requestBody.request.East = geometry.bounds.northeast.lng;
+            requestBody.request.South = geometry.bounds.southwest.lat;
+            requestBody.request.West = geometry.bounds.southwest.lng;
+        }else{
+            requestBody.request.North = geometry.location.lat;
+            requestBody.request.East = geometry.location.lng;
+            requestBody.request.South = geometry.location.lat;
+            requestBody.request.West = geometry.location.lng;
+        }
+        return requestBody;
     }
 
-    generateEmbed(results){
+    generateEmbed(results,googleResult){
         const descriptions = [];
         const googleStaticMap = [this.googleStaticMap];
         results.forEach(result=>{
@@ -63,18 +71,18 @@ class Locate{
             url.push("&loc=",result.Id);
             url.push("&orgid=",result.Organization.Id);
             url.push("&addrid=",result.Address.Id);
-            descriptionValue.push(url.join(""));
+            descriptionValue.push("[Event Page]","(",encodeURI(url.join("")),")");
             description.value=descriptionValue.join("");
             descriptions.push(description);
 
             googleStaticMap.push(this.googleStaticMapStandardMarkup);
-            googleStaticMap.push("label:"+(results.indexOf(result)+1)+"|");
-            googleStaticMap.push(result.Address.Line1+" "+result.Address.PostalCode+" "+result.Address.City+" "+
+            googleStaticMap.push("label:",(results.indexOf(result)+1),"|");
+            googleStaticMap.push(result.Address.Line1," ",result.Address.PostalCode," ",result.Address.City," ",
                 result.Address.CountryName);
         });
         return rp({url: encodeURI(googleStaticMap.join("")),encoding:null}).then(body=>{
             return new Discord.RichEmbed({
-                title: "Locations",
+                title: "Locations for "+googleResult.formatted_address,
                 file:{
                     attachment:body,
                     name:"location.png"},
@@ -85,15 +93,15 @@ class Locate{
     }
 
     locate(location){
-        return rp({url: this.geocoder+encodeURIComponent(location), json:true}).then(body=>{
-            if(body.results !== null && body.results.length>0){
+        return rp({url: this.geocoder+encodeURIComponent(location), json:true}).then(googleBody=>{
+            if(googleBody.results !== null && googleBody.results.length>0){
                 return rp({
                     method:'POST',
                     url:this.wizardsLocator,
-                    body:this.generateRequestBody(body.results[0].geometry.bounds),
+                    body:this.generateRequestBody(googleBody.results[0].geometry),
                     json:true
-                }).then(body=>{
-                    return this.generateEmbed(body.d.Results);
+                }).then(wizardsBody=>{
+                    return this.generateEmbed(wizardsBody.d.Results,googleBody.results[0]);
                 },err=> {
                     log.error("Error getting stores from Wizards",err.error.details);
                     return new Discord.RichEmbed({

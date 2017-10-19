@@ -1,6 +1,6 @@
 const rp = require("request-promise-native");
 const Discord = require("discord.js");
-const log = require("log4js").getLogger("standard");
+const log = require("log4js").getLogger("locate");
 
 class Locate{
 
@@ -16,7 +16,7 @@ class Locate{
                 aliases: [],
                 inline: false,
                 description: "Lists stores that are nearby the specified location",
-                help: '',
+                help: 'This command shows you the nearest event stores to a given location.',
                 examples: ["!locate New York"]
             }
         };
@@ -37,11 +37,15 @@ class Locate{
                 EarliestEventStartDate: null,
                 LatestEventStartDate: null,
                 LocalTime: '/Date('+Date.now()+')/',
-                EventTypeCodes: [],
-                PlayFormatCodes: [],
+                EventTypeCodes: [], //The list of of event types you are looking for like Grand Prix or Friday Night Magic
+                PlayFormatCodes: [], //The list of the event formats you are looking for like standard or modern
                 MarketingProgramCodes: [],
-                ProductLineCodes: ["MG"],
-                SalesBrandCodes: ["MG"]
+                ProductLineCodes: ["MG"], //The list of product lines for which you seek events (MG stands for Magic the Gathering)
+                SalesBrandCodes: ["MG"], //The list of brands (games) for which you seek events (MG stands for Magic the Gathering)
+                North: geometry.location.lat,
+                East: geometry.location.lng,
+                South: geometry.location.lat,
+                West: geometry.location.lng
             }
         };
         if(geometry.bounds){
@@ -49,46 +53,30 @@ class Locate{
             requestBody.request.East = geometry.bounds.northeast.lng;
             requestBody.request.South = geometry.bounds.southwest.lat;
             requestBody.request.West = geometry.bounds.southwest.lng;
-        }else{
-            requestBody.request.North = geometry.location.lat;
-            requestBody.request.East = geometry.location.lng;
-            requestBody.request.South = geometry.location.lat;
-            requestBody.request.West = geometry.location.lng;
         }
         return requestBody;
     }
 
     generateEmbed(results,googleResult){
-        const descriptions = [];
+        const fields = [];
         const googleStaticMap = [this.googleStaticMap];
         results.forEach(result=>{
-            const description = {name:["*",(results.indexOf(result)+1),": ",result.Address.Name,"*","\n"].join(""),
-                inline:true};
-            const descriptionValue = [result.Address.Line1," - ",result.Address.City,"\n"];
-            const url = [this.wizardsStoreUrl];
-            url.push("p=",result.Address.City,",+",result.Address.CountryName);
-            url.push("&c=",result.Address.Latitude,",",result.Address.Longitude);
-            url.push("&loc=",result.Id);
-            url.push("&orgid=",result.Organization.Id);
-            url.push("&addrid=",result.Address.Id);
-            descriptionValue.push("[Event Page]","(",encodeURI(url.join("")),")");
-            description.value=descriptionValue.join("");
-            descriptions.push(description);
+            const description = {name:`*${results.indexOf(result)+1}: ${result.Address.Name}*,\n`,inline:true};
+            const url = `${this.wizardsStoreUrl}p=${result.Address.City},+${result.Address.CountryName}&c=${result.Address.Latitude},${result.Address.Longitude}&loc=${result.Id}&orgid=${result.Organization.Id}&addrid=${result.Address.Id}`;
+            description.value = `${result.Address.Line1} - ${result.Address.City}\n[Event Page](${encodeURI(url)})`;
+            fields.push(description);
 
-            googleStaticMap.push(this.googleStaticMapStandardMarkup);
-            googleStaticMap.push("label:",(results.indexOf(result)+1),"|");
-            googleStaticMap.push(result.Address.Line1," ",result.Address.PostalCode," ",result.Address.City," ",
-                result.Address.CountryName);
+            googleStaticMap.push(`${this.googleStaticMapStandardMarkup}label:${results.indexOf(result)+1}|${result.Address.Line1} ${result.Address.PostalCode} ${result.Address.City} ${result.Address.CountryName}`);
         });
-        return rp({url: encodeURI(googleStaticMap.join("")),encoding:null}).then(body=>{
-            return new Discord.RichEmbed({
+        return rp({url: encodeURI(googleStaticMap.join("")),encoding:null}).then(body=>
+            new Discord.RichEmbed({
                 title: "Locations for "+googleResult.formatted_address,
                 file:{
                     attachment:body,
                     name:"location.png"},
-                fields:descriptions
-            });
-        });
+                fields:fields
+            })
+        );
 
     }
 
@@ -100,9 +88,7 @@ class Locate{
                     url:this.wizardsLocator,
                     body:this.generateRequestBody(googleBody.results[0].geometry),
                     json:true
-                }).then(wizardsBody=>{
-                    return this.generateEmbed(wizardsBody.d.Results,googleBody.results[0]);
-                },err=> {
+                }).then(wizardsBody=>this.generateEmbed(wizardsBody.d.Results,googleBody.results[0]),err=> {
                     log.error("Error getting stores from Wizards",err.error.details);
                     return new Discord.RichEmbed({
                         title: "Locate - Error",
@@ -123,7 +109,7 @@ class Locate{
 
     handleMessage(command, parameter, msg) {
         this.locate(parameter).then(embed=>{
-            msg.channel.send("",{embed: embed});
+            msg.channel.send("",{embed});
         });
     }
 }

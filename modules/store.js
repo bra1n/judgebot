@@ -11,6 +11,8 @@ class StoreLocator {
         this.googleStaticMapStandardMarkup = '&markers=size:mid|color:0x513dc2|';
         this.wizardsLocator = 'http://locator.wizards.com/Service/LocationService.svc/GetLocations';
         this.wizardsStoreUrl = 'http://locator.wizards.com/#brand=magic&a=location&massmarket=no&';
+        this.stores = [];
+        this.storesLoaded = false;
         this.commands = {
             stores: {
                 aliases: ['store'],
@@ -20,16 +22,55 @@ class StoreLocator {
                 examples: ["!stores New York"]
             }
         };
-        log.info("Store Locator ready");
+        this.fetchStores();
     }
 
     getCommands() {
         return this.commands;
     }
 
-    generateRequestBody(geometry) {
+    /**
+     * Fetch every store in the store locator at a specific longitude and distance
+     * @param longitude starting longitude (default -180)
+     * @param distance width of area to cover
+     */
+    fetchStores(longitude = 0, distance = 10) {
+        if (longitude > 20 - distance) {
+            // end of the world! abort!
+            log.info(this.stores.length + ' stores cached');
+            this.storesLoaded = true;
+            return;
+        }
+        rp({
+            method: 'POST',
+            url: this.wizardsLocator,
+            body: this.generateRequestBody({
+                location: {},
+                bounds: {northeast: {lat: 85, lng: longitude + distance}, southwest: {lat: -85, lng: longitude}}
+            }, 5000),
+            json: true
+        }).then(response => {
+            let count = 0;
+            if (response.d.Results) {
+                response.d.Results.forEach(({Address, Organization, IsStore}) => {
+                    if (IsStore && Organization) {
+                        count++;
+                        delete Organization.__type;
+                        delete Organization.MasterGuid;
+                        delete Address.__type;
+                        delete Address.Format;
+                        this.stores.push({Address, Organization, IsStore});
+                    }
+                });
+            }
+            log.info(`retrieved ${count} stores between ${longitude} and ${longitude + distance} longitude`);
+            this.fetchStores(longitude + distance);
+        }, err => log.error(err));
+    }
+
+    generateRequestBody(geometry, count = 10) {
         let requestBody = {
-            count: 12,
+            count,
             filter_mass_markets: true,
             language: "en-us",
             page: 1,
@@ -57,8 +98,16 @@ class StoreLocator {
         return requestBody;
     }
 
-    // @source https://stackoverflow.com/questions/27928
-    getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
+    /**
+     * Calculate distance between 2 lat/lon coordinates
+     * @source https://stackoverflow.com/questions/27928
+     * @param lat1
+     * @param lon1
+     * @param lat2
+     * @param lon2
+     * @returns {number}
+     */
+    getDistance(lat1, lon1, lat2, lon2) {
         const deg2rad = (deg) => deg * (Math.PI/180)
         const R = 6371; // Radius of the earth in km
         const dLat = deg2rad(lat2-lat1);  // deg2rad below
@@ -73,32 +122,39 @@ class StoreLocator {
         return d;
     }
 
-    generateStoreEmbed(results, googleResult) {
+    generateStoreEmbed(stores, googleResult) {
         const fields = [];
         const googleStaticMap = [this.googleStaticMap];
-        results.forEach(result => {
-            if (!result.IsStore || fields.length > 5) return;
-            const {Address, Organization} = result;
-            const url = `${this.wizardsStoreUrl}p=${Address.City},+${Address.CountryName}&c=${Address.Latitude},${Address.Longitude}&loc=${result.Id}&orgid=${Organization.Id}&addrid=${Address.Id}`;
+        stores.forEach(store => {
+            if (!store.IsStore || fields.length > 5) return;
+            const {Address, Organization} = store;
+            const eventUrl = `${this.wizardsStoreUrl}p=${Address.City},+${Address.CountryName}&c=${Address.Latitude},` +
+                             `${Address.Longitude}&loc=${Address.Id}&orgid=${Organization.Id}&addrid=${Address.Id}`;
+            const storeUrl = Organization.PrimaryUrl || Organization.CommunityUrl;
+            const levels = ['Unknown', 'Gateway', 'Core', 'Advanced', 'Advanced Plus'];
             // calculate distance in KM
-            const distance = this.getDistanceFromLatLonInKm(
+            const distance = this.getDistance(
                 Address.Latitude, Address.Longitude,
                 googleResult.geometry.location.lat, googleResult.geometry.location.lng);
+
             fields.push({
                 name: `${fields.length + 1}) ${Address.Name} (${Math.round(distance)}km)`,
                 value: `${Address.Line1}\n`+
                     `${Address.PostalCode} ${Address.City}\n`+
+                    `**WPN Level:** ${levels[Organization.Level || 0]}\n`+
                     `**Phone:** ${Organization.Phone}\n`+
-                    `**E-Mail:** [${Organization.Email}](mailto:${Organization.Email})\n`+
-                    `**Link:** [List of Events](${encodeURI(url)})`,
+                    `**Links:** [Events](${encodeURI(eventUrl)}), `+
+                    (storeUrl ? `[Website](${storeUrl}), ` : '')+
+                    `[E-Mail](mailto:${Organization.Email})`,
                 inline: true
             });
 
-            googleStaticMap.push(`${this.googleStaticMapStandardMarkup}label:${fields.length}|${Address.Line1} ${Address.PostalCode} ${Address.City} ${Address.CountryName}`);
+            googleStaticMap.push(`${this.googleStaticMapStandardMarkup}label:${fields.length}|${Address.Line1} `+
+                                 `${Address.PostalCode} ${Address.City} ${Address.CountryName}`);
         });
         return rp({url: encodeURI(googleStaticMap.join("")), encoding: null}).then(body =>
             new Discord.RichEmbed({
-                title: `I found ${fields.length} store${results.length !== 1 ? 's':''} near ${googleResult.formatted_address}`,
+                title: `Stores closest to ${googleResult.formatted_address}`,
                 description: `:link: [Wizards Store Locator results](http://locator.wizards.com/#brand=magic&a=search&p=${encodeURIComponent(googleResult.formatted_address)}&massmarket=no)`,
                 file: fields.length ? { // only show map if there are actual stores
                     attachment: body,
@@ -112,15 +168,31 @@ class StoreLocator {
     }
 
     locate(location) {
+        const count = 10; // number of "stores" to retrieve (error margin included for non-store results)
         return rp({url: this.geocoder + encodeURIComponent(location), json: true}).then(googleBody => {
             if (googleBody.results !== null && googleBody.results.length > 0) {
-                return rp({
-                    method: 'POST',
-                    url: this.wizardsLocator,
-                    body: this.generateRequestBody(googleBody.results[0].geometry),
-                    json: true
-                }).then(wizardsBody => this.generateStoreEmbed(wizardsBody.d.Results, googleBody.results[0]),
-                    err => this.generateErrorEmbed(err, "Couldn't retrieve stores from Wizards."));
+                if (!this.storesLoaded || !this.stores.length) {
+                    // if stores are not cached yet, use live results (slow!)
+                    return rp({
+                        method: 'POST',
+                        url: this.wizardsLocator,
+                        body: this.generateRequestBody(googleBody.results[0].geometry, count),
+                        json: true
+                    }).then(wizardsBody => this.generateStoreEmbed(wizardsBody.d.Results, googleBody.results[0]),
+                        err => this.generateErrorEmbed(err, "Couldn't retrieve stores from Wizards."));
+                } else {
+                    // use cached stores to calculate closest stores
+                    const location = {
+                        lat: googleBody.results[0].geometry.location.lat,
+                        lng: googleBody.results[0].geometry.location.lng
+                    }
+                    // create a copy of stores and sort it by distance to our location
+                    let results = this.stores.slice();
+                    results.sort((a, b) =>
+                        this.getDistance(a.Address.Latitude, a.Address.Longitude, location.lat, location.lng) -
+                        this.getDistance(b.Address.Latitude, b.Address.Longitude, location.lat, location.lng));
+                    return this.generateStoreEmbed(results.slice(0, count), googleBody.results[0]);
+                }
             } else {
                 return this.generateErrorEmbed(null, `Location \`${location}\` not found.`);
             }

@@ -11,12 +11,12 @@ const modules = [
     'card',
     'hangman',
     'standard',
+    'store',
     'rules/cr',
     'rules/ipg',
     'rules/mtr',
     'rules/jar',
-    'help',
-    'locate'
+    'help'
 ];
 
 // initialize the bot and all modules

@@ -75,7 +75,7 @@ class MtgHangman {
             embed.setTitle(card.name);
             embed.setFooter(missing.length ? 'You failed to guess the card!':'You guessed the card!');
             embed.setURL(card.scryfall_uri);
-            embed.setImage(card.image_uri);
+            embed.setImage(card.image_uris.normal);
             embed.setColor(missing.length ? 0xff0000 : 0x00ff00);
         }
 

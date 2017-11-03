@@ -238,7 +238,7 @@ class MtgCardLoader {
                 footer: {text: footer},
                 url: card.scryfall_uri,
                 color: this.getBorderColor(card.layout === 'transform' ? card.card_faces[0]:card),
-                thumbnail: {url: card.image_uri}
+                thumbnail: {url: card.image_uris.small}
             });
 
             // add pricing, if requested

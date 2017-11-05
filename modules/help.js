@@ -10,7 +10,7 @@ class Help {
                 description: "Show this help text",
                 help: 'This command allows you to explore the different functions and ' +
                     'features of your beloved judgebot. You can look up detailed descriptions ' +
-                    'for a command by using `!help <command>`.',
+                    'for a command by using `!help <command>`, like `!help card`.',
                 examples: ["!help", "!help card"]
             }
         };
@@ -34,12 +34,16 @@ class Help {
         const commands = {};
         this.modules.forEach(module => {
             _.forEach(module.getCommands(), (commandObj, command) => {
+                commandObj.name = command;
                 commands[command] = commandObj;
+                commandObj.aliases.forEach(alias => {
+                    commands[alias] = commandObj;
+                });
             })
         })
 
         if (parameter && commands[parameter]) {
-            embed.setTitle('Command "!'+parameter+'"');
+            embed.setTitle('Command "!'+commands[parameter].name+'"');
             embed.setDescription(commands[parameter].help);
             embed.addField('Examples', '`' + commands[parameter].examples.join('`\n`') + '`', true)
             if (commands[parameter].aliases && commands[parameter].aliases.length) {

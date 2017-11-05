@@ -37,6 +37,7 @@ class MtgCardLoader {
             }
         };
         this.cardApi = "https://api.scryfall.com/cards/search?q=";
+        this.cardApiFuzzy = "https://api.scryfall.com/cards/named?fuzzy=";
         // Discord bots can use custom emojis globally, so we just reference these Manamoji through their code / ID
         // (currently hosted on the Judgebot testing discord)
         // @see https://github.com/scryfall/thopter/tree/master/manamoji
@@ -211,6 +212,7 @@ class MtgCardLoader {
                 title += ' ' + card.mana_cost;
             }
 
+            // DFC use card_faces array for each face
             if (card.layout === 'transform' && card.card_faces && card.card_faces[0].mana_cost) {
                 title += ' ' + card.card_faces[0].mana_cost;
                 card.image_uris = card.card_faces[0].image_uris;
@@ -239,7 +241,8 @@ class MtgCardLoader {
                 footer: {text: footer},
                 url: card.scryfall_uri,
                 color: this.getBorderColor(card.layout === 'transform' ? card.card_faces[0]:card),
-                thumbnail: {url: card.image_uris.small}
+                thumbnail: {url: card.image_uris.small},
+                image: card.zoom ? {url: card.image_uris.normal} : null
             });
 
             // add pricing, if requested
@@ -297,20 +300,28 @@ class MtgCardLoader {
     getCards(cardName) {
         let requestPromise;
         if (this.cardCache[cardName]) {
+            // cache hit
             requestPromise = new Promise(resolve => resolve(this.cardCache[cardName]));
         } else {
-            requestPromise = rp({url: this.cardApi + encodeURIComponent(cardName + ' include:extras'), json: true});
-            requestPromise.then(response => {
-                if (response.data) {
-                    // if cache is too big, remove the oldest entry
-                    if (this.cardCacheDict.length >= this.cardCacheLimit) {
-                        delete this.cardCache[this.cardCacheDict.shift()];
+            // ask Scryfall
+            requestPromise = new Promise((resolve, reject) => {
+                rp({url: this.cardApi + encodeURIComponent(cardName + ' include:extras'), json: true}).then(response => {
+                    if (response.data) {
+                        // if cache is too big, remove the oldest entry
+                        if (this.cardCacheDict.length >= this.cardCacheLimit) {
+                            delete this.cardCache[this.cardCacheDict.shift()];
+                        }
+                        // cache results
+                        this.cardCache[cardName] = response;
+                        this.cardCacheDict.push(cardName);
                     }
-                    // cache results
-                    this.cardCache[cardName] = response;
-                    this.cardCacheDict.push(cardName);
-                }
-            }, err => log.warn('Scryfall API Error:', err.error.details));
+                    resolve(response);
+                }, () => {
+                    log.info('Falling back to fuzzy search for '+cardName);
+                    rp({url: this.cardApiFuzzy + encodeURIComponent(cardName), json: true})
+                        .then(response => resolve({data: [response]}), reject);
+                });
+            });
         }
         return requestPromise;
     }
@@ -330,25 +341,29 @@ class MtgCardLoader {
                 this.generateEmbed(body.data, command, permission).then(embed => {
                     return msg.channel.send('', {embed});
                 }, err => log.error(err)).then(sentMessage => {
-                    // if multiple results, add reactions
-                    if (body.data.length > 1) {
-                        sentMessage.react('⬅').then(() => sentMessage.react('➡'));
-                        sentMessage.createReactionCollector(
-                            ({emoji} , user) => ['⬅','➡'].indexOf(emoji.toString()) > -1 && user.id === msg.author.id,
-                            {time: 30000, max: 20}
-                        ).on('collect', reaction => {
-                            //reaction.remove(msg.author); // needs edit message rights
-                            if(reaction.emoji.toString() === '⬅') {
-                                body.data.unshift(body.data.pop());
-                            } else {
-                                body.data.push(body.data.shift());
-                            }
-                            // edit the message to show the next card
-                            this.generateEmbed(body.data, command, permission).then(embed => {
-                                sentMessage.edit('', {embed});
-                            });
+                    // add reactions for zoom and paging
+                    sentMessage.react('🔍').then(() => {
+                        if (body.data.length > 1) {
+                            sentMessage.react('⬅').then(() => sentMessage.react('➡'));
+                        }
+                    });
+                    sentMessage.createReactionCollector(
+                        ({emoji} , user) => ['⬅','➡','🔍'].indexOf(emoji.toString()) > -1 && user.id === msg.author.id,
+                        {time: 60000, max: 20}
+                    ).on('collect', reaction => {
+                        if(reaction.emoji.toString() === '⬅') {
+                            body.data.unshift(body.data.pop());
+                        } else if(reaction.emoji.toString() === '➡') {
+                            body.data.push(body.data.shift());
+                        } else {
+                            // toggle zoom
+                            body.data[0].zoom = !body.data[0].zoom;
+                        }
+                        // edit the message to update the current card
+                        this.generateEmbed(body.data, command, permission).then(embed => {
+                            sentMessage.edit('', {embed});
                         });
-                    }
+                    });
                 }, err => log.error(err));
             }
         }, (err) => {

@@ -27,8 +27,12 @@ For example: `I'm looking for !card tarmogoyf! and !card noble hierarch` would s
 - **!price \<partial cardname\>**: searches for an (English) card by name and outputs the card together with prices in USD, EUR and TIX, *Example: !price Tarmogoyf*
 - **!legal \<partial cardname\>**: searches for an (English) card by name and outputs the card together with a list of formats where it is legal, *Example: !legal Tarmogoyf*
 - **!ruling \<partial cardname\>**: searches for an (English) card by name and outputs the Gatherer rulings for that card, *Example: !ruling Tarmogoyf*
+- **!stores \<location name\>**: searches for the closest Magic stores near the provided location, *Example: !stores new york*
+- **!events \<store name\>**: shows the next 6 Magic events for the provided store, *Example: !events funtainment*
+- **!hangman \<easy|medium|hard\>**: starts a game of Hangman where you guess a Magic card name with Discord reactions, *Example: !hangman easy*
+- **!standard**: shows all sets that are currently legal in Standard
 - **!cr \<paragraph number\>**: shows the chosen paragraph from the [Comprehensive Rules](https://rules.wizards.com/rulebook.aspx?game=Magic&category=Game+Rules), *Example: !cr 100.6b*
 - **!define \<keyword\>**: shows the chosen keyword definition from the [Comprehensive Rules](https://rules.wizards.com/rulebook.aspx?game=Magic&category=Game+Rules), *Example: !define banding*
 - **!ipg \<paragraph number\>**: shows the chosen (sub-)section from the [Infraction Procedure Guide](http://blogs.magicjudges.org/rules/ipg/), *Example: !ipg 2.1, !ipg hce philosophy*
 - **!mtr \<paragraph number\>**: shows the chose section from the [Magic: The Gathering Tournament Rules](http://blogs.magicjudges.org/rules/mtr/), *Example: !mtr 3, !mtr 4.2*
-- **!help**: show a list of available commands (in a direct message)
+- **!help \<optional command name\>**: show a list of available commands (in a direct message), or detailed help for the provided command name, *Example: !help events*

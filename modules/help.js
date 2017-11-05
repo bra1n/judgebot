@@ -52,6 +52,7 @@ class Help {
         } else {
             let description = '';
             _.forEach(commands, (commandObj, command) => {
+                if (command !== commandObj.name) return;
                 description += ':small_blue_diamond: **!'+command+'**  '+commandObj.description+'\n';
             });
             embed.setDescription(description+'\n To learn more about a command, use `!help <command>`');

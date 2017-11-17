@@ -1,4 +1,4 @@
-# MTG Discord Bot [![Code Climate](https://codeclimate.com/github/bra1n/judgebot/badges/gpa.svg)](https://codeclimate.com/github/bra1n/judgebot)
+# MTG Discord Bot 
 [![Discord Bots](https://discordbots.org/api/widget/240537940378386442.png)](https://discordbots.org/bot/240537940378386442?utm_source=widget)
 
 Discord Bot for Magic / Judge related content
@@ -36,3 +36,6 @@ For example: `I'm looking for !card tarmogoyf! and !card noble hierarch` would s
 - **!ipg \<paragraph number\>**: shows the chosen (sub-)section from the [Infraction Procedure Guide](http://blogs.magicjudges.org/rules/ipg/), *Example: !ipg 2.1, !ipg hce philosophy*
 - **!mtr \<paragraph number\>**: shows the chose section from the [Magic: The Gathering Tournament Rules](http://blogs.magicjudges.org/rules/mtr/), *Example: !mtr 3, !mtr 4.2*
 - **!help \<optional command name\>**: show a list of available commands (in a direct message), or detailed help for the provided command name, *Example: !help events*
+
+## Badges
+[![Code Climate](https://codeclimate.com/github/bra1n/judgebot/badges/gpa.svg)](https://codeclimate.com/github/bra1n/judgebot)

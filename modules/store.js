@@ -12,6 +12,7 @@ class StoreLocator {
         this.storeLocator = 'http://locator.wizards.com/Service/LocationService.svc/GetLocations';
         this.eventsLocator = 'http://locator.wizards.com/Service/LocationService.svc/GetLocationDetails';
         this.wizardsStoreUrl = 'http://locator.wizards.com/#brand=magic&a=location&massmarket=no&';
+        this.wizardsSearchUrl = 'http://locator.wizards.com/#brand=magic&a=search&massmarket=no&p=';
         this.storeLevels = ['Unknown', 'Gateway', 'Core', 'Advanced', 'Advanced Plus'];
         this.eventTypes = {
             "fnm": "FM",
@@ -276,7 +277,7 @@ class StoreLocator {
         return rp({url: encodeURI(googleStaticMap.join("")), encoding: null}).then(body =>
             new Discord.RichEmbed({
                 title: `Stores closest to ${googleResult.formatted_address}`,
-                description: `:link: [Wizards Store Locator results](http://locator.wizards.com/#brand=magic&a=search&p=${encodeURIComponent(googleResult.formatted_address)}&massmarket=no)`,
+                description: `:link: [Wizards Store Locator results](${this.wizardsSearchUrl}${encodeURIComponent(googleResult.formatted_address)})`,
                 file: fields.length ? { // only show map if there are actual stores
                     attachment: body,
                     name: "location.png"

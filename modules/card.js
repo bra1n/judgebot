@@ -213,8 +213,10 @@ class MtgCardLoader {
             }
 
             // DFC use card_faces array for each face
-            if (card.layout === 'transform' && card.card_faces && card.card_faces[0].mana_cost) {
-                title += ' ' + card.card_faces[0].mana_cost;
+            if (card.layout === 'transform' && card.card_faces) {
+                if (card.card_faces[0].mana_cost) {
+                    title += ' ' + card.card_faces[0].mana_cost;
+                }
                 card.image_uris = card.card_faces[0].image_uris;
             }
 

@@ -6,7 +6,7 @@ const log = require("log4js").getLogger("standard");
 class Standard {
 
     constructor() {
-        this.api = "http://whatsinstandard.com/api/4/sets.json";
+        this.api = "http://whatsinstandard.com/api/v5/sets.json";
         this.commands = {
             standard: {
                 aliases: [],
@@ -34,11 +34,11 @@ class Standard {
 
     generateEmbed(setList) {
         const currentDate = new Date();
-        const removedFutureSetList = setList.filter(set => {
+        const removedFutureAndPastSetList = setList.sets.filter(set => {
             const releaseDate = new Date(set.enter_date);
-            return currentDate.getTime() >= releaseDate.getTime();
+            return currentDate.getTime() >= releaseDate.getTime() && set.exit_date === null;
         });
-        const groupedSetList = _.groupBy(removedFutureSetList, "rough_exit_date");
+        const groupedSetList = _.groupBy(removedFutureAndPastSetList, "rough_exit_date");
         const descriptions = [];
         _.forEach(groupedSetList, (value, key) => {
             descriptions.push("*Rotates ", key, ":*```", value.map(set => set.name).join(" | "), "```\n");

@@ -112,4 +112,8 @@ bot.on('guildDelete', (guild) => {
 });
 
 // start the engines!
-bot.login(process.env.DISCORD_TOKEN);
+try {
+    bot.login(process.env.DISCORD_TOKEN);
+} catch(err) {
+    log.error(err);
+}

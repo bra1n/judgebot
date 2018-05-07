@@ -20,7 +20,7 @@ node server.js
 
 ## Supported commands
 
-Any supported command can be entered at any place in your message and should end with a second `!` or the end of the message.
+Many supported command can be entered at any place in your message and should end with a second `!` or the end of the message.
 For example: `I'm looking for !card tarmogoyf! and !card noble hierarch` would show the cards Tarmogoyf and Noble Hierarch.
 
 - **!card \<partial cardname\>**: searches for an (English) card by name and outputs the card together with an image, if available, supports the full [Scryfall syntax](https://scryfall.com/docs/reference), *Example: !card Tarmogoyf*

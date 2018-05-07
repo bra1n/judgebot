@@ -5,19 +5,6 @@ Discord Bot for Magic / Judge related content
 
 [Add the bot to your server](https://discordapp.com/oauth2/authorize?client_id=240537940378386442&scope=bot&permissions=314432)
 
-## Setup
-
-Clone the Git repository and run the following commands:
-```sh
-npm install
-export DISCORD_TOKEN="<your Discord bot token>"
-export GOOGLE_TOKEN="<your Google (Maps) API key>"
-export CR_ADDRESS="https://sites.google.com/site/mtgfamiliar/rules/MagicCompRules.txt"
-export IPG_ADDRESS="https://sites.google.com/site/mtgfamiliar/rules/InfractionProcedureGuide-light.html"
-export MTR_ADDRESS="https://sites.google.com/site/mtgfamiliar/rules/MagicTournamentRules-light.html"
-node server.js
-```
-
 ## Supported commands
 
 Many supported command can be entered at any place in your message and should end with a second `!` or the end of the message.
@@ -36,6 +23,19 @@ For example: `I'm looking for !card tarmogoyf! and !card noble hierarch` would s
 - **!ipg \<paragraph number\>**: shows the chosen (sub-)section from the [Infraction Procedure Guide](http://blogs.magicjudges.org/rules/ipg/), *Example: !ipg 2.1, !ipg hce philosophy*
 - **!mtr \<paragraph number\>**: shows the chose section from the [Magic: The Gathering Tournament Rules](http://blogs.magicjudges.org/rules/mtr/), *Example: !mtr 3, !mtr 4.2*
 - **!help \<optional command name\>**: show a list of available commands (in a direct message), or detailed help for the provided command name, *Example: !help events*
+
+## Development Setup
+
+Clone the Git repository and run the following commands:
+```sh
+npm install
+export DISCORD_TOKEN="<your Discord bot token>"
+export GOOGLE_TOKEN="<your Google (Maps) API key>"
+export CR_ADDRESS="https://sites.google.com/site/mtgfamiliar/rules/MagicCompRules.txt"
+export IPG_ADDRESS="https://sites.google.com/site/mtgfamiliar/rules/InfractionProcedureGuide-light.html"
+export MTR_ADDRESS="https://sites.google.com/site/mtgfamiliar/rules/MagicTournamentRules-light.html"
+node server.js
+```
 
 ## Badges
 [![Code Climate](https://codeclimate.com/github/bra1n/judgebot/badges/gpa.svg)](https://codeclimate.com/github/bra1n/judgebot)

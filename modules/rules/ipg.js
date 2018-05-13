@@ -4,7 +4,7 @@ const _ = require("lodash");
 const log = require("log4js").getLogger('ipg');
 const Discord = require("discord.js");
 
-const IPG_ADDRESS = process.env.IPG_ADDRESS || "https://sites.google.com/site/mtgfamiliar/rules/InfractionProcedureGuide-light.html";
+const IPG_ADDRESS = process.env.IPG_ADDRESS || "https://raw.githubusercontent.com/hgarus/mtgdocs/master/docs/ipg.json";
 
 class IPG {
     constructor(initialize = true) {
@@ -72,119 +72,16 @@ class IPG {
             'cheating': '4.8'
         };
         if (initialize) {
-            rp({url: IPG_ADDRESS, simple: false, resolveWithFullResponse: true }).then(response => {
+            rp({url: IPG_ADDRESS, simple: false, resolveWithFullResponse: true, json: true }).then(response => {
                 if (response.statusCode === 200) {
-                    this.init(response.body);
+                    this.ipgData = response.body;
+                    log.info(response.body);
+                    log.info("IPG Ready");
                 } else {
                     log.error("Error loading IPG, server returned status code " + response.statusCode);
                 }
             }).catch(e => log.error("Error loading IPG: " + e, e));
         }
-    }
-
-    init(ipgHtml) {
-        const $ = cheerio.load(ipgHtml);
-        this.cleanup($);
-        this.handleChapters($);
-        this.handleSections($);
-        this.handleSubsections($);
-        log.info("IPG Ready");
-    }
-
-    cleanup($) {
-        //remove appendices
-        $('b:contains("APPENDIX")').parent().nextAll().addBack().remove();
-
-        // wrap standalone text nodes in p tags
-        const nodes = $("body").contents();
-        for (let i = 0; i < nodes.length; i++) {
-            const node = nodes[i];
-            // Text Node
-            if (node.nodeType === 3) {
-                $(node).wrap("p");
-            }
-        }
-
-        /* mark various different headers
-         * the ipg is grouped into chapters, denoted by a header starting with a single digit,
-         * these contain sections, denoted by a header starting with multiple digits separated by a period.
-         * Most sections consist of several subsections with an additional header such as "Definition" or "Philosophy".
-         * In addition there are some paragraphs which behave more like subsections (currently paragraphs describing Upgrades and Downgrades)
-         */
-        const chapterHeaders = $("h4").filter((i, e) => $(e).text().match(/^\d+\s/)).addClass("chapter-header");
-        const sectionHeaders = $("h4").filter((i, e) => $(e).text().match(/^\d+\.\d+\s/)).addClass("section-header");
-        $("h4").not(chapterHeaders).not(sectionHeaders).addClass("subsection-header");
-        $("p").each((i, p) => {
-            var $p = $(p);
-            const pseudoSubsectionStart = /^\s*(Upgrade|Downgrade):/;
-            const matchedPseudoSubsection = $p.text().match(pseudoSubsectionStart);
-            if (matchedPseudoSubsection) {
-                $p.before($('<h4 class="subsection-header">' + matchedPseudoSubsection[1] + "</h4>"));
-                $p.text($p.text().replace(pseudoSubsectionStart, "").trim());
-            }
-        });
-    }
-
-    titleCase(str) {
-        return str.split(/\s+/).map(s => s.toLowerCase()).map(_.upperFirst).join(" ");
-    }
-
-    collapseWhitespace(str) {
-        return str.trim().replace(/\n\s*\n/g, "#break#").replace(/\n/g, '').replace(/#break#/g, '\n\n');
-    }
-
-    handleChapters($) {
-        $('.chapter-header').each((i, h) => {
-            const titleText = this.titleCase($(h).text().trim());
-            const number = titleText.split(" ", 1)[0];
-
-            this.ipgData[number] = {
-                title: titleText,
-                sections: [],
-                url: this.location + number + '/',
-                text: this.collapseWhitespace($(h).nextUntil("h4").text())
-            };
-        });
-    }
-
-    handleSections($) {
-        $('.section-header').each((i, h) => {
-            const titleText = this.titleCase($(h).text().trim());
-            const number = titleText.split(" ", 1)[0];
-            const chapterNumber = number.split(".", 1)[0];
-            const penalty = $(h).nextUntil(".section-header", "table").first().find("td").text().trim();
-
-            this.ipgData[number] = {
-                title: titleText,
-                penalty: penalty,
-                subsections: [],
-                subsectionContents: {},
-                url: this.location + number.replace(/\./,'-') + '/',
-                text: this.collapseWhitespace($(h).nextUntil("h4").filter("p").text())
-            };
-
-            this.ipgData[chapterNumber].sections.push(number);
-        });
-    }
-
-    handleSubsections($) {
-        $('.subsection-header').each((i, h) => {
-            const titleText = this.titleCase($(h).text());
-            const subsectionName = _.kebabCase(titleText);
-            const subsectionContent = this.collapseWhitespace($(h).nextUntil('h4').text());
-            const sectionNumber = $(h).prevAll(".section-header").first().text().split(' ', 1)[0];
-            const sectionEntry = this.ipgData[sectionNumber];
-
-            if (sectionEntry.subsections.indexOf(subsectionName) === -1) {
-                sectionEntry.subsections.push(subsectionName);
-                sectionEntry.subsectionContents[subsectionName] = {
-                    title: titleText,
-                    text: [subsectionContent]
-                };
-            } else {
-                sectionEntry.subsectionContents[subsectionName].text.push(subsectionContent);
-            }
-        });
     }
 
     getCommands() {

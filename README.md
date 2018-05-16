@@ -32,7 +32,7 @@ npm install
 export DISCORD_TOKEN="<your Discord bot token>"
 export GOOGLE_TOKEN="<your Google (Maps) API key>"
 export CR_ADDRESS="https://sites.google.com/site/mtgfamiliar/rules/MagicCompRules.txt"
-export IPG_ADDRESS="https://sites.google.com/site/mtgfamiliar/rules/InfractionProcedureGuide-light.html"
+export IPG_ADDRESS="https://raw.githubusercontent.com/hgarus/mtgdocs/master/docs/ipg.json"
 export MTR_ADDRESS="https://sites.google.com/site/mtgfamiliar/rules/MagicTournamentRules-light.html"
 node server.js
 ```

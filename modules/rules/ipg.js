@@ -75,7 +75,6 @@ class IPG {
             rp({url: IPG_ADDRESS, simple: false, resolveWithFullResponse: true, json: true }).then(response => {
                 if (response.statusCode === 200) {
                     this.ipgData = response.body;
-                    log.info(response.body);
                     log.info("IPG Ready");
                 } else {
                     log.error("Error loading IPG, server returned status code " + response.statusCode);

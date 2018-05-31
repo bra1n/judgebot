@@ -170,7 +170,10 @@ class MtgCardLoader {
 
         const description = [];
         if (card.type_line) { // bold type line
-            description.push('**'+card.type_line+'** ('+card.set.toUpperCase()+' '+_.capitalize(card.rarity)+')');
+            let type = `**${card.type_line}** `;
+            type += `(${card.set.toUpperCase()} ${_.capitalize(card.rarity)}`;
+            type += `${card.lang && card.lang !== 'en' ? ' :flag_' + card.lang + ':':''})`;
+            description.push(type);
         }
         if (card.oracle_text) { // reminder text in italics
             description.push(card.oracle_text.replace(/[()]/g, m => m === '(' ? '*(':')*'));
@@ -206,7 +209,8 @@ class MtgCardLoader {
             const card = cards[0];
 
             // generate embed title and description text
-            let title = card.name;
+            // use printed name (=translated) over English name, if available
+            let title = card.printed_name || card.name;
 
             if (card.mana_cost) {
                 title += ' ' + card.mana_cost;
@@ -232,7 +236,7 @@ class MtgCardLoader {
             let footer = "Use !help to get a list of available commands.";
             if(cards.length > 1) {
                 footer = (cards.length - 1) + ' other hits:\n';
-                footer += cards.slice(1,6).map(cardObj => cardObj.name).join('; ');
+                footer += cards.slice(1,6).map(cardObj => (cardObj.printed_name || cardObj.name)).join('; ');
                 if (cards.length > 6) footer += '; ...';
             }
 

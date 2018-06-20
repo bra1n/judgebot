@@ -1,10 +1,11 @@
 const _ = require('lodash');
+const iconv = require('iconv-lite');
 const request = require("request");
 const log = require("log4js").getLogger('cr');
 const Discord = require('discord.js');
 
 // Using the current CR as the default, not sure if they actually stick around once new ones are published
-const CR_ADDRESS = process.env.CR_ADDRESS || "https://sites.google.com/site/mtgfamiliar/rules/MagicCompRules.txt";
+const CR_ADDRESS = process.env.CR_ADDRESS || "http://media.wizards.com/2018/downloads/MagicCompRules%2020180608.txt";
 
 class CR {
     constructor() {
@@ -23,9 +24,9 @@ class CR {
         this.crData = {};
         this.maxLength = 2040;
 
-        request({url: CR_ADDRESS}, (error, response, body) => {
-            if (!error && response.statusCode === 200) {
-                this.initCR(body);
+        request({url: CR_ADDRESS, encoding: null}, (error, response, body) => {
+            if (!error && response.statusCode === 200 && body) {
+                this.initCR(iconv.decode(body, 'cp1252'));
             } else {
                 log.error("Error loading CR: " + error);
             }
@@ -38,15 +39,15 @@ class CR {
 
     initCR(crText) {
         crText = crText.replace(/\r/g, "");
-        let rulesText = crText.substring(crText.search("\nRULES_VERYLONGSTRINGOFLETTERSUNLIKELYTOBEFOUNDINTHEACTUALRULES\n") + 1, crText.length);
-        const glossaryStartIndex = rulesText.search("\nGLOSSARY_VERYLONGSTRINGOFLETTERSUNLIKELYTOBEFOUNDINTHEACTUALRULES\n") + 1;
-        const glossaryText = rulesText.substring(glossaryStartIndex, rulesText.search("\nEOF_VERYLONGSTRINGOFLETTERSUNLIKELYTOBEFOUNDINTHEACTUALRULES\n") + 1);
+        let rulesText = crText.substring(crText.search("\nCredits\n") + 9).trim();
+        const glossaryStartIndex = rulesText.search("\nGlossary\n") + 10;
+        const glossaryText = rulesText.substring(glossaryStartIndex, rulesText.search("\nCredits\n")).trim();
         rulesText = rulesText.substring(0, glossaryStartIndex);
 
         this.glossary = this.parseGlossary(glossaryText);
         this.crData = this.parseRules(rulesText, this.glossary);
-        this.crData.description = crText.split('\n')[0];
-        log.info("CR Ready");
+        this.crData.description = crText.substr(0, crText.search("\nIntroduction\n")).match(/effective as of (.*)\./)[0];
+        log.info("CR Ready, effective "+this.crData.description);
     }
 
     parseGlossary(glossaryText) {
@@ -69,7 +70,7 @@ class CR {
     }
 
     parseRules(crText, glossaryEntries) {
-        const ruleNumberPrefixRe = /^(\d{3}\.\w+)\.?/;
+        const ruleNumberPrefixRe = /^(\d{3}\.\w*)\.?/;
         const crEntries = {};
 
         for (let entry of crText.split("\n\n")) {
@@ -112,6 +113,8 @@ class CR {
             for(let x = 'a'.charCodeAt(0); this.crData[parameter + String.fromCharCode(x)]; x++) {
                 description += '\n' + this.crData[parameter + String.fromCharCode(x)];
             }
+        } else if (description && this.crData[parameter + '.1']) {
+            description += '\n' + this.crData[parameter + '.1'];
         }
         return _.truncate(description, {length, separator: '\n'});
     }

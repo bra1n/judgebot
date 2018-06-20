@@ -119,7 +119,7 @@ class MtgCardLoader {
         // cache for Card lookup
         this.cardCache = {};
         this.cardCacheDict = [];
-        this.cardCacheLimit = 100;
+        this.cardCacheLimit = 10;
     }
 
     getCommands() {

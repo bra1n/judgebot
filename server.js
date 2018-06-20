@@ -9,13 +9,13 @@ const commandChar = process.env.COMMAND_CHAR || "!";
 const spamTimeout = 3000; // milliseconds
 const modules = [
     'card',
-    // 'hangman',
-    // 'standard',
-    // 'store',
+    'hangman',
+    'standard',
+    'store',
     'rules/cr',
-    // 'rules/ipg',
-    // 'rules/mtr',
-    // 'rules/jar',
+    'rules/ipg',
+    'rules/mtr',
+    'rules/jar',
     'help'
 ];
 

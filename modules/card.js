@@ -170,13 +170,14 @@ class MtgCardLoader {
 
         const description = [];
         if (card.type_line) { // bold type line
-            let type = `**${card.type_line}** `;
+            let type = `**${card.printed_type_line || card.type_line}** `;
             type += `(${card.set.toUpperCase()} ${_.capitalize(card.rarity)}`;
             type += `${card.lang && card.lang !== 'en' ? ' :flag_' + card.lang + ':':''})`;
             description.push(type);
         }
         if (card.oracle_text) { // reminder text in italics
-            description.push(card.oracle_text.replace(/[()]/g, m => m === '(' ? '*(':')*'));
+            const text = card.printed_text || card.oracle_text;
+            description.push(text.replace(/[()]/g, m => m === '(' ? '*(':')*'));
         }
         if (card.flavor_text) { // flavor text in italics
             description.push('*' + card.flavor_text+'*');

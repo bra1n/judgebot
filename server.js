@@ -111,6 +111,12 @@ bot.on('guildDelete', (guild) => {
     utils.updateServerCount(bot);
 });
 
+bot.on('error', (error) => {
+    log.error('client error received');
+    log.error(error);
+    console.log(error);
+});
+
 // start the engines!
 try {
     bot.login(process.env.DISCORD_TOKEN);

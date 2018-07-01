@@ -116,10 +116,6 @@ class MtgCardLoader {
         };
         // cache for Discord permission lookup
         this.permissionCache = {};
-        // cache for Card lookup
-        this.cardCache = {};
-        this.cardCacheDict = [];
-        this.cardCacheLimit = 10;
     }
 
     getCommands() {
@@ -303,36 +299,58 @@ class MtgCardLoader {
         });
     }
 
-    // fetch the cards from Scryfall and cache them
+    /**
+     * Fetch the cards from Scryfall
+     * @param cardName
+     * @returns {Promise<Object>}
+     */
     getCards(cardName) {
         let requestPromise;
-        if (this.cardCache[cardName]) {
-            // cache hit
-            requestPromise = new Promise(resolve => resolve(this.cardCache[cardName]));
-        } else {
-            // ask Scryfall
-            requestPromise = new Promise((resolve, reject) => {
-                rp({url: this.cardApi + encodeURIComponent(cardName + ' include:extras'), json: true}).then(response => {
-                    if (response.data) {
-                        // if cache is too big, remove the oldest entry
-                        if (this.cardCacheDict.length >= this.cardCacheLimit) {
-                            delete this.cardCache[this.cardCacheDict.shift()];
-                        }
-                        // cache results
-                        this.cardCache[cardName] = response;
-                        this.cardCacheDict.push(cardName);
-                    }
-                    resolve(response);
-                }, () => {
-                    log.info('Falling back to fuzzy search for '+cardName);
-                    rp({url: this.cardApiFuzzy + encodeURIComponent(cardName), json: true})
-                        .then(response => resolve({data: [response]}), reject);
-                });
+        requestPromise = new Promise((resolve, reject) => {
+            rp({url: this.cardApi + encodeURIComponent(cardName + ' include:extras'), json: true}).then(body => {
+                if(body.data && body.data.length) {
+                    // sort the cards to better match the search query (issue #87)
+                    body.data.sort((a, b) => this.scoreHit(b, cardName) - this.scoreHit(a, cardName));
+                }
+                resolve(body);
+            }, () => {
+                log.info('Falling back to fuzzy search for '+cardName);
+                rp({url: this.cardApiFuzzy + encodeURIComponent(cardName), json: true})
+                    .then(response => resolve({data: [response]}), reject);
             });
-        }
+        });
         return requestPromise;
     }
 
+    /**
+     * Calculate the hit score for a card and a search query
+     * @param card
+     * @param query
+     */
+    scoreHit(card, query) {
+        const name = (card.printed_name || card.name).toLowerCase().replace(/[^a-z0-9]/g, '');
+        const nameQuery = query.split(" ").filter(q => !q.match(/[=:()><]/)).join(" ").toLowerCase().replace(/[^a-z0-9]/g, '');
+        let score = 0;
+        if (name === nameQuery) {
+            // exact match - to the top!
+            score = 10000;
+        } else if(name.match(new RegExp('^'+nameQuery))) {
+            // match starts at the beginning of the name
+            score = 1000 * nameQuery.length / name.length;
+        } else {
+            // match anywhere but the beginning
+            score = 100 * nameQuery.length / name.length;
+        }
+        return score;
+    }
+
+    /**
+     * Handle an incoming message
+     * @param command
+     * @param parameter
+     * @param msg
+     * @returns {Promise}
+     */
     handleMessage(command, parameter, msg) {
         const cardName = parameter.toLowerCase();
         // no card name, no lookup

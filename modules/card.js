@@ -276,28 +276,29 @@ class MtgCardLoader {
         });
     }
 
+    // disabled due to memory concerns
     // fetch permissions from Guild to use custom emojis
-    getEmojiPermission(msg) {
-        return new Promise(resolve => {
-            if (msg.guild && this.permissionCache[msg.guild.id] === undefined) {
-                // in guild chat, fetch member role
-                msg.guild.fetchMember(msg.client.user.id).then(member => {
-                    if (member.permissions) {
-                        this.permissionCache[msg.guild.id] = member.permissions.has('USE_EXTERNAL_EMOJIS');
-                        resolve(this.permissionCache[msg.guild.id]);
-                    } else {
-                        resolve(true);
-                    }
-                });
-            } else if(msg.guild) {
-                // in guild chat, permission is cached
-                resolve(this.permissionCache[msg.guild.id])
-            } else {
-                // otherwise assume we can use custom emoji
-                resolve(true);
-            }
-        });
-    }
+    // getEmojiPermission(msg) {
+    //     return new Promise(resolve => {
+    //         if (msg.guild && this.permissionCache[msg.guild.id] === undefined) {
+    //             // in guild chat, fetch member role
+    //             msg.guild.fetchMember(msg.client.user.id).then(member => {
+    //                 if (member.permissions) {
+    //                     this.permissionCache[msg.guild.id] = member.permissions.has('USE_EXTERNAL_EMOJIS');
+    //                     resolve(this.permissionCache[msg.guild.id]);
+    //                 } else {
+    //                     resolve(true);
+    //                 }
+    //             });
+    //         } else if(msg.guild) {
+    //             // in guild chat, permission is cached
+    //             resolve(this.permissionCache[msg.guild.id])
+    //         } else {
+    //             // otherwise assume we can use custom emoji
+    //             resolve(true);
+    //         }
+    //     });
+    // }
 
     /**
      * Fetch the cards from Scryfall
@@ -355,11 +356,9 @@ class MtgCardLoader {
         const cardName = parameter.toLowerCase();
         // no card name, no lookup
         if (!cardName) return;
-        // fetch data from API and Discord Guild
-        return Promise.all([
-            this.getCards(cardName),
-            this.getEmojiPermission(msg)
-        ]).then(([body, permission]) => {
+        const permission = true; // assume we have custom emoji permission for now
+        // fetch data from API
+        this.getCards(cardName).then(body => {
             // check if there are results
             if (body.data && body.data.length) {
                 // generate embed
@@ -391,7 +390,7 @@ class MtgCardLoader {
                     });
                 }, err => log.error(err));
             }
-        }, (err) => {
+        }).catch(err => {
             let description = 'No cards matched `'+cardName+'`.';
             if (err.statusCode === 503) {
                 description = 'Scryfall is currently offline, please try again later.'

@@ -46,7 +46,7 @@ class CR {
 
         this.glossary = this.parseGlossary(glossaryText);
         this.crData = this.parseRules(rulesText, this.glossary);
-        this.crData.description = crText.substr(0, crText.search("\nIntroduction\n")).match(/effective as of (.*)\./)[0];
+        this.crData.description = crText.substr(0, crText.search("\nIntroduction\n")).match(/effective as of (.*)\./)[1];
         log.info("CR Ready, effective "+this.crData.description);
     }
 

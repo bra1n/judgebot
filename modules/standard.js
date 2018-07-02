@@ -35,7 +35,8 @@ class Standard {
     generateEmbed(setList) {
         const currentDate = new Date();
         const removedFutureAndPastSetList = setList.sets.filter(set => {
-            return currentDate.getTime() >= new Date(set.enter_date).getTime() && (set.exit_date === null || currentDate.getTime() < new Date(set.exit_date).getTime());
+            return currentDate.getTime() >= new Date(set.enter_date).getTime() &&
+                (set.exit_date === null || currentDate.getTime() < new Date(set.exit_date).getTime());
         });
         const groupedSetList = _.groupBy(removedFutureAndPastSetList, "rough_exit_date");
         const descriptions = [];

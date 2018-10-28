@@ -1,10 +1,11 @@
 const _ = require('lodash');
 const cheerio = require('cheerio');
 const rp = require('request-promise-native');
-const log = require('log4js').getLogger('mtr');
+const utils = require("../../utils");
+const log = utils.getLogger('mtr');
 const Discord = require('discord.js');
 
-const MTR_ADDRESS = process.env.MTR_ADDRESS || 'https://sites.google.com/site/mtgfamiliar/rules/MagicTournamentRules-light.html';
+const MTR_ADDRESS = process.env.MTR_ADDRESS || 'https://raw.githubusercontent.com/AEFeinstein/GathererScraper/master/rules/MagicTournamentRules-light.html';
 
 class MTR {
     constructor(initialize = true) {
@@ -51,7 +52,7 @@ class MTR {
 
     cleanup($) {
         // get description from body
-        this.mtrData.description = $('body').get(0).childNodes[4].data.trim();
+        this.mtrData.description = $('body').get(0).childNodes[0].data.trim() || '';
 
         // wrap standalone text nodes in p tags
         const nodes = $('body').contents();
@@ -67,9 +68,9 @@ class MTR {
         $('p').filter((i, e) => /^\s*$/.test($(e).text())).remove();
 
         // mark chapter headers
-        $('h4').filter((i, e) => /^\d+\.\s/.test($(e).text().trim())).addClass('chapter-header');
+        $('h2').filter((i, e) => /^\d+\.\s/.test($(e).text().trim())).addClass('chapter-header');
         // mark section headers
-        $('h4').filter((i, e) => /^(\d+\.\d+\s)/.test($(e).text().trim())).addClass('section-header');
+        $('h1').filter((i, e) => /^MTR (\d+\.\d+\s)/.test($(e).text().trim())).addClass('section-header');
     }
 
     handleChapters($) {
@@ -87,7 +88,7 @@ class MTR {
     handleSections($) {
         $('.section-header').each((i, e) => {
 
-            const title = $(e).text().trim();
+            const title = $(e).text().substr(4).trim();
             const key = title.split(/\s/, 1)[0];
             const chapter = key.split('.', 1)[0];
             const content = this.handleSectionContent($, $(e), title, key);

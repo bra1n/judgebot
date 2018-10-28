@@ -3,6 +3,7 @@ const _ = require("lodash");
 const utils = require("./utils");
 
 const log = utils.getLogger('bot');
+log.info(`booting up...`);
 
 // basic server stuff, modules to load
 const commandChar = process.env.COMMAND_CHAR || "!";

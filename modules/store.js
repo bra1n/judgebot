@@ -1,6 +1,7 @@
 const rp = require("request-promise-native");
 const Discord = require("discord.js");
-const log = require("log4js").getLogger("locator");
+const utils = require("../utils");
+const log = utils.getLogger('locator');
 const Fuse = require("fuse.js");
 
 class StoreLocator {

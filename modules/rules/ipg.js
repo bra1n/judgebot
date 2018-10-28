@@ -1,7 +1,8 @@
 const rp = require("request-promise-native");
 const cheerio = require("cheerio");
 const _ = require("lodash");
-const log = require("log4js").getLogger('ipg');
+const utils = require("../../utils");
+const log = utils.getLogger('ipg');
 const Discord = require("discord.js");
 
 const IPG_ADDRESS = process.env.IPG_ADDRESS || "https://raw.githubusercontent.com/hgarus/mtgdocs/master/docs/ipg.json";

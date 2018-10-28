@@ -29,32 +29,37 @@ const prettyLog = ({guild, channel = {}, author = {}}, action, log = '') => {
 
 // send updated stats to bots.discord.com
 const updateServerCount = (bot) => {
-    bot.user.setPresence({
-        game: {
-            name: 'MTG on '+ bot.guilds.size +' servers',
-            url: 'https://github.com/bra1n/judgebot'
+    bot.shard.fetchClientValues('guilds.size')
+    .then(results => {
+        const count = results.reduce((prev, val) => prev + val, 0);
+        bot.user.setPresence({
+            game: {
+                name: 'MTG on '+ count +' servers (' + bot.shard.count + ' shards)',
+                url: 'https://github.com/bra1n/judgebot'
+            }
+        });
+
+        const options = {
+            url: 'https://bots.discord.pw/api/bots/240537940378386442/stats',
+            method: 'POST',
+            headers: {'Authorization': process.env.BOT_TOKEN},
+            body: {"server_count": count || 0},
+            json: true
+        };
+
+        // post stats to bots.discord.pw
+        if (process.env.BOT_TOKEN) {
+            request(options);
         }
-    });
 
-    const options = {
-        url: 'https://bots.discord.pw/api/bots/240537940378386442/stats',
-        method: 'POST',
-        headers: {'Authorization': process.env.BOT_TOKEN},
-        body: {"server_count": bot.guilds.size || 0},
-        json: true
-    };
-
-    // post stats to bots.discord.pw
-    if (process.env.BOT_TOKEN) {
-        request(options);
-    }
-
-    // post stats to discordbots.org
-    if (process.env.BOT_TOKEN2) {
-        options.url = 'https://discordbots.org/api/bots/240537940378386442/stats';
-        options.headers['Authorization'] = process.env.BOT_TOKEN2;
-        request(options);
-    }
+        // post stats to discordbots.org
+        if (process.env.BOT_TOKEN2) {
+            options.url = 'https://discordbots.org/api/bots/240537940378386442/stats';
+            options.headers['Authorization'] = process.env.BOT_TOKEN2;
+            request(options);
+        }
+    })
+    .catch(console.error);
 };
 
 module.exports = {

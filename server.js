@@ -98,7 +98,7 @@ bot.on("message", msg => {
 
 /* Bot event listeners */
 bot.on('ready', () => {
-    log.info('Bot is ready! Username:', bot.user.username, '/ Servers:', bot.guilds.size );
+    log.info('Bot is ready! Username:', bot.user.username, '/ Servers:', bot.guilds.size, ' / Shard: ', bot.shard.id );
     utils.updateServerCount(bot);
 });
 

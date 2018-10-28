@@ -1,7 +1,8 @@
 const rp = require("request-promise-native");
 const _ = require("lodash");
 const Discord = require("discord.js");
-const log = require("log4js").getLogger('card');
+const utils = require("../utils");
+const log = utils.getLogger('card');
 const cheerio = require("cheerio");
 
 class MtgCardLoader {

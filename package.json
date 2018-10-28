@@ -26,7 +26,7 @@
     "fuse.js": "^3.2.0",
     "iconv-lite": "^0.4.23",
     "lodash": "^4.16.6",
-    "log4js": "^2.3.3",
+    "log4js": "^3.0.2",
     "request": "^2.87.0",
     "request-promise-native": "^1.0.3"
   },

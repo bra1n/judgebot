@@ -1,7 +1,8 @@
 const _ = require('lodash');
 const iconv = require('iconv-lite');
 const request = require("request");
-const log = require("log4js").getLogger('cr');
+const utils = require("../../utils");
+const log = utils.getLogger('cr');
 const Discord = require('discord.js');
 
 // Using the current CR as the default, not sure if they actually stick around once new ones are published

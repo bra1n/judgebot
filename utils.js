@@ -13,7 +13,7 @@ const getLogger = (name) => {
         appenders: {out: {type: 'stdout', layout: {type: 'pattern', pattern: logPattern}}},
         categories: { default: { appenders: ['out'], level: process.env.LOG_LEVEL || "info" } }
     });
-    return log4js.getLogger(name);
+    return log4js.getLogger(name + '-' + process.pid);
 }
 
 // create a pretty log message for a user / guild

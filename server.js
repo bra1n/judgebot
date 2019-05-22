@@ -12,7 +12,7 @@ const modules = [
     'card',
     'hangman',
     'standard',
-    'store',
+    // 'store',
     'rules/cr',
     'rules/ipg',
     'rules/mtr',

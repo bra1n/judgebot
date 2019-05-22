@@ -6,7 +6,7 @@ const log = utils.getLogger('cr');
 const Discord = require('discord.js');
 
 // Using the current CR as the default, not sure if they actually stick around once new ones are published
-const CR_ADDRESS = process.env.CR_ADDRESS || "http://media.wizards.com/2018/downloads/MagicCompRules%2020180608.txt";
+const CR_ADDRESS = process.env.CR_ADDRESS || "https://media.wizards.com/2019/downloads/MagicCompRules%2020190503.txt";
 
 class CR {
     constructor() {
@@ -27,7 +27,7 @@ class CR {
 
         request({url: CR_ADDRESS, encoding: null}, (error, response, body) => {
             if (!error && response.statusCode === 200 && body) {
-                this.initCR(iconv.decode(body, 'cp1252'));
+                this.initCR(iconv.decode(body, 'utf-8'));
             } else {
                 log.error("Error loading CR: " + error);
             }
@@ -39,7 +39,8 @@ class CR {
     }
 
     initCR(crText) {
-        crText = crText.replace(/\r/g, "");
+        crText = crText.replace(/\r/g, "\n");
+
         let rulesText = crText.substring(crText.search("\nCredits\n") + 9).trim();
         const glossaryStartIndex = rulesText.search("\nGlossary\n") + 10;
         const glossaryText = rulesText.substring(glossaryStartIndex, rulesText.search("\nCredits\n")).trim();

@@ -375,7 +375,6 @@ class MtgCardLoader {
                     });
 
                     const handleReaction = reaction => {
-                        console.log('reaction event', reaction.emoji.name);
                         if (reaction.emoji.toString() === '⬅') {
                             body.data.unshift(body.data.pop());
                         } else if (reaction.emoji.toString() === '➡') {

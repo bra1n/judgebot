@@ -96,7 +96,7 @@ class IPG {
     formatChapterEntry(entry) {
         const text = entry.text || this.formatPreview(this.ipgData[entry.sections[0]]);
 
-        return new Discord.RichEmbed({
+        return new Discord.MessageEmbed({
             title: `IPG - ${entry.title}`,
             description: _.truncate(text, {length: this.maxLength, separator: '\n'}),
             thumbnail: {url: this.thumbnail},
@@ -107,7 +107,7 @@ class IPG {
     // IPG Section (like "2.1")
     formatSectionEntry(entry) {
         const text = entry.text || this.formatPreview(entry.subsectionContents[entry.subsections[0]]);
-        const embed = new Discord.RichEmbed({
+        const embed = new Discord.MessageEmbed({
             title: `IPG - ${entry.title}`,
             description: _.truncate(text, {length: this.maxLength, separator: '\n'}),
             thumbnail: {url: this.thumbnail},
@@ -127,7 +127,7 @@ class IPG {
     formatSubsectionEntry(sectionEntry, subsectionEntry) {
         const otherSections = sectionEntry.subsections.filter(s => s !== _.kebabCase(subsectionEntry.title));
 
-        return new Discord.RichEmbed({
+        return new Discord.MessageEmbed({
             title: `IPG - ${sectionEntry.title} - ${subsectionEntry.title}`,
             description: _.truncate(subsectionEntry.text.join("\n\n"),{length: this.maxLength, separator: '\n'}),
             thumbnail: {url: this.thumbnail},
@@ -142,7 +142,7 @@ class IPG {
         if (!entry) {
             let availableEntries = _.keys(this.ipgData);
             availableEntries.sort();
-            return new Discord.RichEmbed({
+            return new Discord.MessageEmbed({
                 title: 'IPG - Error',
                 description: 'These parameters don\'t match any entries in the IPG.',
                 color: 0xff0000
@@ -182,7 +182,7 @@ class IPG {
             const embed = this.find(this.handleParameters(parameter));
             return msg.channel.send('', {embed});
         } else {
-            return msg.channel.send('', {embed: new Discord.RichEmbed({
+            return msg.channel.send('', {embed: new Discord.MessageEmbed({
                 title: 'Magic Infraction Procedure Guide',
                 description: this.ipgData.description,
                 thumbnail: {url: this.thumbnail},

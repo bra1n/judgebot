@@ -64,7 +64,7 @@ class MtgHangman {
             'reactions to pick letters.';
 
         // instantiate embed object
-        const embed = new Discord.RichEmbed({
+        const embed = new Discord.MessageEmbed({
             author: {name: "Guess the card:"},
             title,
             description,
@@ -91,7 +91,7 @@ class MtgHangman {
         // check for already running games
         const id = msg.guild ? msg.guild.id : msg.author.id;
         if (this.runningGames.indexOf(id) > -1) {
-            msg.channel.send('', {embed: new Discord.RichEmbed({
+            msg.channel.send('', {embed: new Discord.MessageEmbed({
                 title: "Error",
                 description: "You can only start one hangman game every "+this.gameTime/60000+" minutes.",
                 color: 0xff0000
@@ -111,10 +111,10 @@ class MtgHangman {
                 const embed = this.generateEmbed(body, difficulty);
                 return msg.channel.send('', {embed}).then(sentMessage => {
                     sentMessage.react('❓');
-                    sentMessage.createReactionCollector(
+                    const collector = sentMessage.createReactionCollector(
                         ({emoji}) => emoji.name.charCodeAt(0) === 55356 && emoji.name.charCodeAt(1) >= 56806 && emoji.name.charCodeAt(1) <= 56831,
                         {time: this.gameTime, max: 30}
-                    ).on('collect', (reaction, collector) => {
+                    ).on('collect', (reaction) => {
                         // get emoji character (we only accept :regional_indicator_X: emojis)
                         const char = String.fromCharCode(reaction.emoji.name.charCodeAt(1) - 56709);
                         if (letters.indexOf(char) < 0) {
@@ -138,7 +138,7 @@ class MtgHangman {
             }
         }, err => {
             log.error("Error getting random card from API", err.error.details);
-            msg.channel.send('', {embed: new Discord.RichEmbed({
+            msg.channel.send('', {embed: new Discord.MessageEmbed({
                 title: "Error",
                 description: "Scryfall is currently offline and can't generate us a random card, please try again later.",
                 color: 0xff0000

@@ -130,7 +130,7 @@ class MTR {
 
     formatChapter(chapter) {
         const availableSections = chapter.sections.map(s => '• '+this.mtrData.sections[s].title).join('\n');
-        return new Discord.RichEmbed({
+        return new Discord.MessageEmbed({
             title: `MTR - ${chapter.title}`,
             description: availableSections,
             thumbnail: {url: this.thumbnail},
@@ -139,7 +139,7 @@ class MTR {
     }
 
     formatSection(section) {
-        return new Discord.RichEmbed({
+        return new Discord.MessageEmbed({
             title: `MTR - ${section.title}`,
             description: _.truncate(section.content, {length: this.maxLength, separator: '\n'}),
             thumbnail: {url: this.thumbnail},
@@ -158,7 +158,7 @@ class MTR {
             if (section) {
                 return this.formatSection(section);
             }
-            return new Discord.RichEmbed({
+            return new Discord.MessageEmbed({
                 title: 'MTR - Error',
                 description: 'This section does not exist. Try asking for a chapter to get a list of available sections for that chapter.',
                 color: 0xff0000
@@ -169,7 +169,7 @@ class MTR {
         if (chapter) {
             return this.formatChapter(chapter);
         }
-        return new Discord.RichEmbed({
+        return new Discord.MessageEmbed({
             title: 'MTR - Error',
             description: 'This chapter does not exist.',
             color: 0xff0000
@@ -181,7 +181,7 @@ class MTR {
             const embed = this.find(parameter.toLowerCase().trim().split(" ")[0]);
             return msg.channel.send('', {embed});
         }
-        return msg.channel.send('', {embed: new Discord.RichEmbed({
+        return msg.channel.send('', {embed: new Discord.MessageEmbed({
             title: 'Magic Tournament Rules',
             description: this.mtrData.description,
             thumbnail: {url: this.thumbnail},

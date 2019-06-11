@@ -126,7 +126,7 @@ class CR {
         let params = parameter.trim().toLowerCase().split(" ").map(p => p.replace(/\.$/, ""));
 
         // prepare embed
-        const embed = new Discord.RichEmbed({
+        const embed = new Discord.MessageEmbed({
             title: 'Comprehensive Rules',
             description: 'Effective '+this.crData.description,
             thumbnail: {url: this.thumbnail},

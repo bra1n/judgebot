@@ -44,7 +44,7 @@ class Standard {
         _.forEach(groupedSetList, (value, key) => {
             descriptions.push("*Rotates ", key, ":*```", value.map(set => set.name).join(" | "), "```\n");
         });
-        const embed = new Discord.RichEmbed({
+        const embed = new Discord.MessageEmbed({
             title: "Currently in Standard",
             url: "http://whatsinstandard.com/",
             description: descriptions.join("")
@@ -63,7 +63,7 @@ class Standard {
             }
         }, err => {
             log.error("Error getting Standard list", err.error.details);
-            return new Discord.RichEmbed({
+            return new Discord.MessageEmbed({
                 title: "Standard - Error",
                 description: "Couldn't create Standard list.",
                 color: 0xff0000

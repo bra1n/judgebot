@@ -276,7 +276,7 @@ class StoreLocator {
         });
         // fetch map from google
         return rp({url: encodeURI(googleStaticMap.join("")), encoding: null}).then(body =>
-            new Discord.RichEmbed({
+            new Discord.MessageEmbed({
                 title: `Stores closest to ${googleResult.formatted_address}`,
                 description: `:link: [Wizards Store Locator results](${this.wizardsSearchUrl}${encodeURIComponent(googleResult.formatted_address)})`,
                 file: fields.length ? { // only show map if there are actual stores
@@ -341,7 +341,7 @@ class StoreLocator {
      * @param Organization
      * @param response
      * @param filters
-     * @returns {"discord.js".RichEmbed}
+     * @returns {"discord.js".MessageEmbed}
      */
     generateEventsEmbed({Address, Organization}, response, filters) {
         // helper function to extract a date
@@ -382,7 +382,7 @@ class StoreLocator {
             });
         }
 
-        return new Discord.RichEmbed({
+        return new Discord.MessageEmbed({
             title: Organization.Name,
             description: this.generateStoreDescription(Address, Organization),
             fields: fields,
@@ -417,13 +417,13 @@ class StoreLocator {
      * Generate an error message embed
      * @param error
      * @param description
-     * @returns {"discord.js".RichEmbed}
+     * @returns {"discord.js".MessageEmbed}
      */
     generateErrorEmbed(error, description) {
         if(error) {
             log.error(description, error);
         }
-        return new Discord.RichEmbed({
+        return new Discord.MessageEmbed({
             title: "Store & Event Locator - Error",
             description,
             color: 0xff0000
@@ -434,7 +434,7 @@ class StoreLocator {
         if (command === 'stores' || this.commands.stores.aliases.indexOf(command) > -1) {
             // locate stores
             if (parameter) {
-                return msg.channel.send('', {embed: new Discord.RichEmbed({
+                return msg.channel.send('', {embed: new Discord.MessageEmbed({
                     title: "Store & Event Locator",
                     description: "Looking up stores near `"+parameter+"`..."
                 })}).then(sentMessage =>

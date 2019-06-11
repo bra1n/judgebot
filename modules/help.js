@@ -25,7 +25,7 @@ class Help {
     handleMessage(command, parameter, msg) {
         let param = parameter.trim().toLowerCase().split(" ")[0];
 
-        const embed = new Discord.RichEmbed({
+        const embed = new Discord.MessageEmbed({
             title: 'List of available commands',
             // thumbnail: {url: this.thumbnail},
             url: this.location

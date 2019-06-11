@@ -21,7 +21,38 @@ const modules = [
 ];
 
 // initialize the bot and all modules
-const bot = new Discord.Client();
+const bot = new Discord.Client({
+    shardCount: 'auto' ,
+    messageCacheMaxSize: 1,
+    messageCacheLifetime: 60,
+    messageSweepInterval: 90,
+    disabledEvents: [
+        'GUILD_UPDATE',
+        'GUILD_MEMBER_ADD',
+        'GUILD_MEMBER_REMOVE',
+        'GUILD_MEMBER_UPDATE',
+        'GUILD_MEMBERS_CHUNK',
+        'GUILD_ROLE_CREATE',
+        'GUILD_ROLE_DELETE',
+        'GUILD_ROLE_UPDATE',
+        'GUILD_BAN_ADD',
+        'GUILD_BAN_REMOVE',
+        'GUILD_EMOJIS_UPDATE',
+        'GUILD_INTEGRATIONS_UPDATE',
+        'CHANNEL_DELETE',
+        'CHANNEL_UPDATE',
+        'CHANNEL_PINS_UPDATE',
+        'MESSAGE_DELETE',
+        'MESSAGE_UPDATE',
+        'MESSAGE_DELETE_BULK',
+        'USER_UPDATE',
+        'PRESENCE_UPDATE',
+        'TYPING_START',
+        'VOICE_STATE_UPDATE',
+        'VOICE_SERVER_UPDATE',
+        'WEBHOOKS_UPDATE',
+    ]
+});
 const handlers = {};
 const commands = {};
 
@@ -98,7 +129,7 @@ bot.on("message", msg => {
 
 /* Bot event listeners */
 bot.on('ready', () => {
-    log.info('Bot is ready! Username:', bot.user.username, '/ Servers:', bot.guilds.size, ' / Shard: ', bot.shard.id );
+    log.info('Bot is ready! Username:', bot.user.username, '/ Servers:', bot.guilds.size );
     utils.updateServerCount(bot);
 });
 
@@ -117,6 +148,8 @@ bot.on('error', (error) => {
     log.error(error);
     console.log(error);
 });
+
+// bot.on("debug",console.debug);
 
 // start the engines!
 try {

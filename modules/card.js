@@ -239,7 +239,7 @@ class MtgCardLoader {
             }
 
             // instantiate embed object
-            const embed = new Discord.RichEmbed({
+            const embed = new Discord.MessageEmbed({
                 title,
                 description,
                 footer: {text: footer},
@@ -373,13 +373,12 @@ class MtgCardLoader {
                             sentMessage.react('⬅').then(() => sentMessage.react('➡'));
                         }
                     });
-                    sentMessage.createReactionCollector(
-                        ({emoji} , user) => ['⬅','➡','🔍'].indexOf(emoji.toString()) > -1 && user.id === msg.author.id,
-                        {time: 60000, max: 20}
-                    ).on('collect', reaction => {
-                        if(reaction.emoji.toString() === '⬅') {
+
+                    const handleReaction = reaction => {
+                        console.log('reaction event', reaction.emoji.name);
+                        if (reaction.emoji.toString() === '⬅') {
                             body.data.unshift(body.data.pop());
-                        } else if(reaction.emoji.toString() === '➡') {
+                        } else if (reaction.emoji.toString() === '➡') {
                             body.data.push(body.data.shift());
                         } else {
                             // toggle zoom
@@ -389,7 +388,12 @@ class MtgCardLoader {
                         this.generateEmbed(body.data, command, permission).then(embed => {
                             sentMessage.edit('', {embed});
                         });
-                    });
+                    }
+
+                    sentMessage.createReactionCollector(
+                        ({emoji} , user) => ['⬅','➡','🔍'].indexOf(emoji.toString()) > -1 && user.id === msg.author.id,
+                        {time: 60000, max: 20}
+                    ).on('collect', handleReaction).on('remove', handleReaction);
                 }, err => log.error(err));
             }
         }).catch(err => {
@@ -397,7 +401,7 @@ class MtgCardLoader {
             if (err.statusCode === 503) {
                 description = 'Scryfall is currently offline, please try again later.'
             }
-            return msg.channel.send('', {embed: new Discord.RichEmbed({
+            return msg.channel.send('', {embed: new Discord.MessageEmbed({
                 title: 'Error',
                 description,
                 color: 0xff0000

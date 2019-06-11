@@ -20,15 +20,15 @@
     "url": "https://github.com/bra1n/judgebot/issues"
   },
   "dependencies": {
-    "chalk": "^2.1.0",
-    "cheerio": "^1.0.0-rc.2",
-    "discord.js": "^11.4.2",
-    "fuse.js": "^3.3.0",
+    "chalk": "^2.4.2",
+    "cheerio": "^1.0.0-rc.3",
+    "discord.js": "discordjs/discord.js#master",
+    "fuse.js": "^3.4.5",
     "iconv-lite": "^0.4.24",
     "lodash": "^4.17.11",
     "log4js": "^3.0.6",
     "request": "^2.88.0",
-    "request-promise-native": "^1.0.3"
+    "request-promise-native": "^1.0.7"
   },
   "devDependencies": {
     "chai": "^3.5.0",

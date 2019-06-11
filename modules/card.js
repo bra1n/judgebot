@@ -250,11 +250,12 @@ class MtgCardLoader {
             });
 
             // add pricing, if requested
-            if (command.match(/^price/)) {
+            if (command.match(/^price/) && card.prices) {
                 let prices = [];
-                if(card.usd) prices.push('$' + card.usd);
-                if(card.eur) prices.push(card.eur + '€');
-                if(card.tix) prices.push(card.tix + ' Tix');
+                if(card.prices.usd) prices.push('$' + card.prices.usd);
+                if(card.prices.usd_foil) prices.push('**Foil** $' + card.prices.usd_foil);
+                if(card.prices.eur) prices.push(card.prices.eur + '€');
+                if(card.prices.tix) prices.push(card.prices.tix + ' Tix');
                 embed.addField('Prices', prices.join(' / ') || 'No prices found');
             }
 

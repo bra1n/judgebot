@@ -25,7 +25,7 @@
     "discord.js": "discordjs/discord.js#master",
     "fuse.js": "^3.4.5",
     "iconv-lite": "^0.4.24",
-    "lodash": "^4.17.11",
+    "lodash": "^4.17.13",
     "log4js": "^3.0.6",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.7"

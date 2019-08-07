@@ -278,30 +278,6 @@ class MtgCardLoader {
         });
     }
 
-    // disabled due to memory concerns
-    // fetch permissions from Guild to use custom emojis
-    // getEmojiPermission(msg) {
-    //     return new Promise(resolve => {
-    //         if (msg.guild && this.permissionCache[msg.guild.id] === undefined) {
-    //             // in guild chat, fetch member role
-    //             msg.guild.fetchMember(msg.client.user.id).then(member => {
-    //                 if (member.permissions) {
-    //                     this.permissionCache[msg.guild.id] = member.permissions.has('USE_EXTERNAL_EMOJIS');
-    //                     resolve(this.permissionCache[msg.guild.id]);
-    //                 } else {
-    //                     resolve(true);
-    //                 }
-    //             });
-    //         } else if(msg.guild) {
-    //             // in guild chat, permission is cached
-    //             resolve(this.permissionCache[msg.guild.id])
-    //         } else {
-    //             // otherwise assume we can use custom emoji
-    //             resolve(true);
-    //         }
-    //     });
-    // }
-
     /**
      * Fetch the cards from Scryfall
      * @param cardName
@@ -372,7 +348,7 @@ class MtgCardLoader {
                         if (body.data.length > 1) {
                             sentMessage.react('⬅').then(() => sentMessage.react('➡'));
                         }
-                    });
+                    }).catch(() => {});
 
                     const handleReaction = reaction => {
                         if (reaction.emoji.toString() === '⬅') {
@@ -386,14 +362,14 @@ class MtgCardLoader {
                         // edit the message to update the current card
                         this.generateEmbed(body.data, command, permission).then(embed => {
                             sentMessage.edit('', {embed});
-                        });
+                        }).catch(() => {});
                     }
 
                     sentMessage.createReactionCollector(
                         ({emoji} , user) => ['⬅','➡','🔍'].indexOf(emoji.toString()) > -1 && user.id === msg.author.id,
                         {time: 60000, max: 20}
                     ).on('collect', handleReaction).on('remove', handleReaction);
-                }, err => log.error(err));
+                }, err => log.error(err)).catch(() => {});
             }
         }).catch(err => {
             let description = 'No cards matched `'+cardName+'`.';

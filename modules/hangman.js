@@ -134,7 +134,7 @@ class MtgHangman {
                         // remove guild / author ID from running games
                         _.pull(this.runningGames, id);
                     });
-                });
+                }).catch(() => {});
             }
         }, err => {
             log.error("Error getting random card from API", err.error.details);
@@ -144,7 +144,7 @@ class MtgHangman {
                 color: 0xff0000
             })});
             _.pull(this.runningGames, id);
-        });
+        }).catch(() => {});
     }
 }
 

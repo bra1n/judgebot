@@ -55,7 +55,7 @@ class CR {
     parseGlossary(glossaryText) {
         const glossaryEntries = {};
 
-        for (const entry of glossaryText.split("\n\n\n\n")) {
+        for (const entry of glossaryText.split("\n\n")) {
             if (!entry.trim()) {
                 continue;
             }

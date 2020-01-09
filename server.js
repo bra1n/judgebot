@@ -22,7 +22,7 @@ const modules = [
 
 // initialize the bot and all modules
 const bot = new Discord.Client({
-    shardCount: 'auto' ,
+    shardList: 'auto' ,
     messageCacheMaxSize: 1,
     messageCacheLifetime: 60,
     messageSweepInterval: 90,

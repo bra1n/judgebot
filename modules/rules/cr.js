@@ -39,7 +39,7 @@ class CR {
     }
 
     initCR(crText) {
-        crText = crText.replace(/\r/g, "\n");
+        crText = crText.replace(/\r/g, "");
 
         let rulesText = crText.substring(crText.search("\nCredits\n") + 9).trim();
         const glossaryStartIndex = rulesText.search("\nGlossary\n") + 10;

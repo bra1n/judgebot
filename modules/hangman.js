@@ -27,7 +27,7 @@ class MtgHangman {
         };
         this.cardApi = "https://api.scryfall.com/cards/random";
         this.gameTime = 3*60*1000; // minutes
-        this.runningGames = [];
+        this.runningGames = {};
     }
 
     getCommands() {
@@ -88,21 +88,43 @@ class MtgHangman {
     }
 
     handleMessage(command, parameter, msg) {
+        const [first, ...rest] = parameter.toLowerCase().split(" ");
+        
         // check for already running games
         const id = msg.guild ? msg.guild.id : msg.author.id;
-        if (this.runningGames.indexOf(id) > -1) {
-            msg.channel.send('', {embed: new Discord.MessageEmbed({
-                title: "Error",
-                description: "You can only start one hangman game every "+this.gameTime/60000+" minutes.",
-                color: 0xff0000
-            })});
-            return;
+        if (id in this.runningGames) {
+            const game = this.runningGames[id];
+            // The user can !hangman guess Some Card Name
+            if (first === 'guess'){
+                const correct = this.runningGames[id].toLowerCase();
+                const guess = rest.join(' ').toLowerCase();
+                if (guess.includes(correct)){
+                    // If they're correct, pretend we guessed all the letters individually
+                    const embed = this.generateEmbed(game.body, game.difficulty, game.body.name.split(''));
+                    game.message.edit('', {embed});
+                    game.collector.stop('finished');
+                    msg.react('☑️️');
+                }
+                else {
+                    msg.react('❎️');
+                }
+            }
+            else {
+                msg.channel.send('', {
+                    embed: new Discord.MessageEmbed({
+                        title: "Error",
+                        description: "You can only start one hangman game every " + this.gameTime / 60000 + " minutes.",
+                        color: 0xff0000
+                    })
+                });
+                return;
+            }
         }
 
-        // add guild / author to running IDs
-        this.runningGames.push(id);
+        // Add an empty dict to the running games dictionary so we don't make duplicates
+        this.runningGames[id] = {};
 
-        const difficulty = parameter.toLowerCase().split(" ")[0]; // can be "easy" or "hard" or blank (=medium)
+        const difficulty = first; // can be "easy" or "hard" or blank (=medium)
 
         // fetch data from API
         rp({url: this.cardApi, json: true}).then(body => {
@@ -132,8 +154,15 @@ class MtgHangman {
                             sentMessage.edit('', {embed: this.generateEmbed(body, difficulty, letters, true)});
                         }
                         // remove guild / author ID from running games
-                        _.pull(this.runningGames, id);
+                        delete this.runningGames[id];
                     });
+                    // Update the game dictionary with pertinent information
+                    this.runningGames = {
+                        message: sentMessage,
+                        collector: collector,
+                        body: body,
+                        difficulty: difficulty
+                    };
                 }).catch(() => {});
             }
         }, err => {

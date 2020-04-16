@@ -35,10 +35,17 @@ class MtgHangman {
     }
 
     // generate the embed card
-    generateEmbed(card, difficulty, letters = [], done = false) {
+    generateEmbed(card, difficulty, letters = [], done = false, forceCorrect = false) {
         // count number of wrong letters and missing letters
         const wrong = letters.filter(c => card.name.toLowerCase().indexOf(c) === -1).length;
-        const missing = _.difference(_.uniq(card.name.replace(/[^a-z]/ig,'').toLowerCase().split("")), letters);
+        let missing;
+        
+        // Allow guessing to force the correct answer
+        if (forceCorrect){
+            missing = 0;
+        } else {
+            missing = _.difference(_.uniq(card.name.replace(/[^a-z]/ig, '').toLowerCase().split("")), letters);
+        }
 
         // generate embed title
         const title = card.name.replace(/[a-z]/ig, c => letters.indexOf(c.toLowerCase()) < 0 ? '⬚':c);
@@ -64,12 +71,10 @@ class MtgHangman {
             'reactions to pick letters.';
 
         // instantiate embed object
-        const embed = new Discord.MessageEmbed({
-            author: {name: "Guess the card:"},
-            title,
-            description,
-            footer: {text: "You have "+this.gameTime/60000+" minutes to guess the card."}
-        });
+        const embed = new Discord.MessageEmbed()
+            .setTitle(title)
+            .addFields({name: 'Guess the card:', value: description})
+            .setFooter('You have ' + this.gameTime / 60000 + ' minutes to guess the card.');
 
         // game is over
         if (done || !missing.length || wrong > 6) {
@@ -89,24 +94,30 @@ class MtgHangman {
 
     handleMessage(command, parameter, msg) {
         const [first, ...rest] = parameter.toLowerCase().split(" ");
-        
+
         // check for already running games
         const id = msg.guild ? msg.guild.id : msg.author.id;
         if (id in this.runningGames) {
             const game = this.runningGames[id];
             // The user can !hangman guess Some Card Name
             if (first === 'guess'){
-                const correct = this.runningGames[id].toLowerCase();
+                const correct = this.runningGames[id].body.name.toLowerCase();
                 const guess = rest.join(' ').toLowerCase();
                 if (guess.includes(correct)){
                     // If they're correct, pretend we guessed all the letters individually
-                    const embed = this.generateEmbed(game.body, game.difficulty, game.body.name.split(''));
+                    const embed = this.generateEmbed(
+                        game.body,
+                        game.difficulty,
+                        game.letters,
+                        true,
+                        true
+                    );
                     game.message.edit('', {embed});
                     game.collector.stop('finished');
-                    msg.react('☑️️');
+                    msg.react('✅');
                 }
                 else {
-                    msg.react('❎️');
+                    msg.react('❎');
                 }
             }
             else {
@@ -117,8 +128,8 @@ class MtgHangman {
                         color: 0xff0000
                     })
                 });
-                return;
             }
+            return;
         }
 
         // Add an empty dict to the running games dictionary so we don't make duplicates
@@ -135,7 +146,7 @@ class MtgHangman {
                     sentMessage.react('❓');
                     const collector = sentMessage.createReactionCollector(
                         ({emoji}) => emoji.name.charCodeAt(0) === 55356 && emoji.name.charCodeAt(1) >= 56806 && emoji.name.charCodeAt(1) <= 56831,
-                        {time: this.gameTime, max: 30}
+                        {time: this.gameTime}
                     ).on('collect', (reaction) => {
                         // get emoji character (we only accept :regional_indicator_X: emojis)
                         const char = String.fromCharCode(reaction.emoji.name.charCodeAt(1) - 56709);
@@ -157,11 +168,12 @@ class MtgHangman {
                         delete this.runningGames[id];
                     });
                     // Update the game dictionary with pertinent information
-                    this.runningGames = {
+                    this.runningGames[id] = {
                         message: sentMessage,
                         collector: collector,
                         body: body,
-                        difficulty: difficulty
+                        difficulty: difficulty,
+                        letters: letters
                     };
                 }).catch(() => {});
             }

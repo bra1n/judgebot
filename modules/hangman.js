@@ -172,7 +172,7 @@ class MtgHangman {
                 description: "Scryfall is currently offline and can't generate us a random card, please try again later.",
                 color: 0xff0000
             })});
-            _.pull(this.runningGames, id);
+            delete this.runningGames[id];
         }).catch(() => {});
     }
 }

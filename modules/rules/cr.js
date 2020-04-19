@@ -6,7 +6,7 @@ const log = utils.getLogger('cr');
 const Discord = require('discord.js');
 
 // Using the current CR as the default, not sure if they actually stick around once new ones are published
-const CR_ADDRESS = process.env.CR_ADDRESS || "https://media.wizards.com/2019/downloads/MagicCompRules%2020191004.txt";
+const CR_ADDRESS = process.env.CR_ADDRESS || "https://media.wizards.com/2020/downloads/MagicCompRules%2020200417.txt";
 
 class CR {
     constructor() {

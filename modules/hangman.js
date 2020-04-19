@@ -6,6 +6,146 @@ const log = utils.getLogger('hangman');
 const Card = require("./card");
 const cardFetcher = new Card();
 
+const GAME_TIME = 3*60*1000; // minutes
+
+class HangmanGame {
+    constructor({
+                    id ,
+                    message = null,
+                    collector = null,
+                    card = null,
+                    difficulty = 'medium',
+                } = {}) {
+        this.id = id;
+        this.message = message;
+        this.collector = collector;
+        this.card = card;
+        this.difficulty = difficulty;
+        
+        this.letters = new Set();
+        this.wrongGuesses = 0;
+        this.done = false;
+    }
+
+    /**
+     * Handle a user guessing a letter in the word
+     * @param {String} char The character that was guessed
+     */
+    handleLetter(char){
+        // get emoji character (we only accept :regional_indicator_X: emojis)
+        this.letters.add(char);
+        this.updateEmbed(id, false);
+    }
+
+    /**
+     * Handle a user guessing the entire card name
+     * @param {String} guess
+     * @param {Discord.Message} msg
+     */
+    handleGuess(guess, msg){
+        const correct = this.card.name.toLowerCase();
+        if (guess.includes(correct)){
+            // If they're correct, pretend we guessed all the letters individually
+            this.updateEmbed(id, true);
+            this.collector.stop('finished');
+            msg.react('✅');
+        }
+        else {
+            this.wrongGuesses++;
+            msg.react('❎');
+            this.updateEmbed(id, false);
+        }
+    }
+
+    /**
+     * Indicates that this game is finished
+     */
+    setDone(){
+        this.done = true;
+        this.updateEmbed();
+        this.collector.stop('finished');
+    }
+
+    /**
+     * Using the stored parameters, updates the embed for the specified game
+     * @param {Boolean} forceCorrect If true, force the game to be won
+     */
+    updateEmbed(forceCorrect = false){
+        this.message.edit('', {embed: this.generateEmbed(forceCorrect)});
+    }
+    
+    /**
+     * Return a discord Embed derived from this game
+     * @param {Boolean} forceCorrect If true, force the game to be won
+     * @returns {module:"discord.js".MessageEmbed}
+     */
+    generateEmbed(forceCorrect = false) {
+        // count number of wrong letters and missing letters
+        let missing;
+        let wrong;
+        let totalGuesses = this.letters.size + this.wrongGuesses;
+
+        // Allow guessing to force the correct answer
+        if (forceCorrect) {
+            missing = 0;
+            wrong = 0;
+        }
+        else {
+            // The total number of mistakes is the sum of the incorrect letters, and incorrect guesses
+            wrong = this.letters.values().filter(c => this.card.name.toLowerCase().indexOf(c) === -1).length + this.wrongGuesses;
+            missing = _.difference(_.uniq(this.card.name.replace(/[^a-z]/ig, '').toLowerCase().split('')), this.letters.values());
+        }
+
+        const correctPercent = (1 - (wrong / (totalGuesses || 1))) * 100;
+
+        // generate embed title
+        const title = this.card.name.replace(/[a-z]/ig, c => this.letters.has(c.toLowerCase()) ? '⬚':c);
+        let description = "";
+        // hard is without mana cost
+        if (this.difficulty !== 'hard') {
+            description += cardFetcher.renderEmojis(this.card.mana_cost) + '\n';
+        }
+        // easy is with type line
+        if (this.difficulty === 'easy') {
+            description += '**' + this.card.type_line + '**\n';
+        }
+
+        description += '```' +
+            '   ____     \n' +
+            `  |    |    Missing: ${missing.length} letter(s)\n` +
+            `  |    ${wrong > 0 ? 'o':' '}    Guessed: ${this.letters.values().join("").toUpperCase()}\n` +
+            `  |   ${wrong > 2 ? '/':' '}${wrong > 1 ? '|':' '}${wrong > 3 ? '\\':' '}   Correct: ${correctPercent}%\n` +
+            `  |    ${wrong > 1 ? '|':' '}    \n` +
+            `  |   ${wrong > 4 ? '/':' '} ${wrong > 5 ? '\\':' '}   \n` +
+            ' _|________```\n' +
+            'Use :regional_indicator_a::regional_indicator_b::regional_indicator_c: ... :regional_indicator_z: ' +
+            'reactions to pick letters.';
+
+        // instantiate embed object
+        const embed = new Discord.MessageEmbed({
+            author: {name: 'Guess the card:'},
+            title,
+            description,
+            footer: {text: 'You have ' + GAME_TIME / 60000 + ' minutes to guess the card.'}
+        });
+
+        // game is over
+        if (this.done || !missing.length || wrong > 6) {
+            embed.setTitle(this.card.name);
+            embed.setFooter(missing.length ? 'You failed to guess the card!':'You guessed the card!');
+            embed.setURL(this.card.scryfall_uri);
+            if (this.card.layout === 'transform' && this.card.card_faces && this.card.card_faces[0].image_uris) {
+                embed.setImage(this.card.card_faces[0].image_uris.normal);
+            } else if(this.card.image_uris) {
+                embed.setImage(this.card.image_uris.normal);
+            }
+            embed.setColor(missing.length ? 0xff0000 : 0x00ff00);
+        }
+
+        return embed;
+    }
+}
+
 class MtgHangman {
     constructor() {
         this.commands = {
@@ -26,7 +166,6 @@ class MtgHangman {
             }
         };
         this.cardApi = "https://api.scryfall.com/cards/random";
-        this.gameTime = 3*60*1000; // minutes
         this.runningGames = {};
     }
 
@@ -34,77 +173,7 @@ class MtgHangman {
         return this.commands;
     }
 
-    /**
-     * Using the stored parameters, updates the embed for the specified game
-     * @param id Game ID
-     * @param forceCorrect If true, force the game to be won
-     */
-    updateEmbed(id, forceCorrect = false){
-        const game = this.runningGames[id];
-        game.message.edit('', {embed: this.generateEmbed(game.card, game.difficulty, game.letters, game.done, forceCorrect, game.wrongGuesses)});
-    }
-
     // generate the embed card
-    generateEmbed(card, difficulty, letters = [], done = false, forceCorrect = false, wrongGuesses = 0) {
-        // count number of wrong letters and missing letters
-        const wrong = letters.filter(c => card.name.toLowerCase().indexOf(c) === -1).length;
-        let missing;
-
-        // Allow guessing to force the correct answer
-        if (forceCorrect) {
-            missing = 0;
-        }
-        else {
-            // The total number of mistakes is the sum of the incorrect letters, and incorrect guesses
-            missing = _.difference(_.uniq(card.name.replace(/[^a-z]/ig, '').toLowerCase().split('')), letters) + wrongGuesses;
-        }
-
-        // generate embed title
-        const title = card.name.replace(/[a-z]/ig, c => letters.indexOf(c.toLowerCase()) < 0 ? '⬚':c);
-        let description = "";
-        // hard is without mana cost
-        if(difficulty !== "hard") {
-            description += cardFetcher.renderEmojis(card.mana_cost)+'\n';
-        }
-        // easy is with type line
-        if(difficulty === "easy") {
-            description += "**"+card.type_line+"**\n";
-        }
-
-        description += '```' +
-            '   ____     \n' +
-            `  |    |    Missing: ${missing.length} letter(s)\n` +
-            `  |    ${wrong > 0 ? 'o':' '}    Guessed: ${letters.join("").toUpperCase()}\n` +
-            `  |   ${wrong > 2 ? '/':' '}${wrong > 1 ? '|':' '}${wrong > 3 ? '\\':' '}   Correct: ${Math.round(100-(wrong/(letters.length || 1))*100)}%\n` +
-            `  |    ${wrong > 1 ? '|':' '}    \n` +
-            `  |   ${wrong > 4 ? '/':' '} ${wrong > 5 ? '\\':' '}   \n` +
-            ' _|________```\n' +
-            'Use :regional_indicator_a::regional_indicator_b::regional_indicator_c: ... :regional_indicator_z: ' +
-            'reactions to pick letters.';
-
-        // instantiate embed object
-        const embed = new Discord.MessageEmbed({
-            author: {name: 'Guess the card:'},
-            title,
-            description,
-            footer: {text: 'You have ' + this.gameTime / 60000 + ' minutes to guess the card.'}
-        });
-
-        // game is over
-        if (done || !missing.length || wrong > 6) {
-            embed.setTitle(card.name);
-            embed.setFooter(missing.length ? 'You failed to guess the card!':'You guessed the card!');
-            embed.setURL(card.scryfall_uri);
-            if (card.layout === 'transform' && card.card_faces && card.card_faces[0].image_uris) {
-                embed.setImage(card.card_faces[0].image_uris.normal);
-            } else if(card.image_uris) {
-                embed.setImage(card.image_uris.normal);
-            }
-            embed.setColor(missing.length ? 0xff0000 : 0x00ff00);
-        }
-
-        return embed;
-    }
 
     handleMessage(command, parameter, msg) {
         const [first, ...rest] = parameter.toLowerCase().split(" ");
@@ -115,19 +184,8 @@ class MtgHangman {
             const game = this.runningGames[id];
             // The user can !hangman guess Some Card Name
             if (first === 'guess'){
-                const correct = game.card.name.toLowerCase();
                 const guess = rest.join(' ').toLowerCase();
-                if (guess.includes(correct)){
-                    // If they're correct, pretend we guessed all the letters individually
-                    this.updateEmbed(id, true);
-                    game.collector.stop('finished');
-                    msg.react('✅');
-                }
-                else {
-                    game.wrongGuesses++;
-                    msg.react('❎');
-                    this.updateEmbed(id, false);
-                }
+                game.handleGuess(guess);
             }
             else {
                 msg.channel.send('', {
@@ -141,51 +199,38 @@ class MtgHangman {
             return;
         }
 
-        // Add an empty dict to the running games dictionary so we don't make duplicates
-        const game = this.runningGames[id] = {};
-
-        const difficulty = first; // can be "easy" or "hard" or blank (=medium)
+        // Create the new game
+        const game = this.runningGames[id] = new HangmanGame({
+            id: id,
+            difficulty: first
+        });
 
         // fetch data from API
         rp({url: this.cardApi, json: true}).then(body => {
             if (body.name) {
-                const letters = [];
-                const embed = this.generateEmbed(body, difficulty);
+                game.card = body;
+                const embed = game.generateEmbed();
                 return msg.channel.send('', {embed}).then(sentMessage => {
                     sentMessage.react('❓');
                     const collector = sentMessage.createReactionCollector(
                         ({emoji}) => emoji.name.charCodeAt(0) === 55356 && emoji.name.charCodeAt(1) >= 56806 && emoji.name.charCodeAt(1) <= 56831,
-                        {time: this.gameTime}
+                        {time: GAME_TIME}
                     ).on('collect', (reaction) => {
                         // get emoji character (we only accept :regional_indicator_X: emojis)
                         const char = String.fromCharCode(reaction.emoji.name.charCodeAt(1) - 56709);
-                        if (letters.indexOf(char) < 0) {
-                            letters.push(char);
-                        }
-                        this.updateEmbed(id, false);
-                        // is the game over? then stop the collector
-                        if (embed.image && embed.image.url) {
-                            collector.stop('finished');
-                        }
+                        game.handleLetter(char);
                     }).on('end', (collected, reason) => {
                         // game is already over, don't edit message again
                         if (reason !== "finished") {
-                            game.done = true;
-                            this.updateEmbed(id, false);
+                            game.setDone();
                         }
                         // remove guild / author ID from running games
                         delete this.runningGames[id];
                     });
-                    // Update the game dictionary with pertinent information
-                    this.runningGames[id] = {
-                        message: sentMessage,
-                        collector: collector,
-                        card: body,
-                        difficulty: difficulty,
-                        letters: letters,
-                        wrongGuesses: 0,
-                        done: false
-                    };
+                    
+                    // Update the game object with pertinent information
+                    game.message = sentMessage;
+                    game.collector = collector;
                 }).catch(() => {});
             }
         }, err => {

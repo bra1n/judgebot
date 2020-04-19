@@ -35,16 +35,18 @@ class MtgHangman {
     }
 
     // generate the embed card
-    generateEmbed(card, difficulty, letters = [], done = false, forceCorrect = false) {
+    generateEmbed(card, difficulty, letters = [], done = false, forceCorrect = false, wrongGuesses = 0) {
         // count number of wrong letters and missing letters
         const wrong = letters.filter(c => card.name.toLowerCase().indexOf(c) === -1).length;
         let missing;
-        
+
         // Allow guessing to force the correct answer
-        if (forceCorrect){
+        if (forceCorrect) {
             missing = 0;
-        } else {
-            missing = _.difference(_.uniq(card.name.replace(/[^a-z]/ig, '').toLowerCase().split("")), letters);
+        }
+        else {
+            // The total number of mistakes is the sum of the incorrect letters, and incorrect guesses
+            missing = _.difference(_.uniq(card.name.replace(/[^a-z]/ig, '').toLowerCase().split('')), letters) + wrongGuesses;
         }
 
         // generate embed title
@@ -71,10 +73,12 @@ class MtgHangman {
             'reactions to pick letters.';
 
         // instantiate embed object
-        const embed = new Discord.MessageEmbed()
-            .setTitle(title)
-            .addFields({name: 'Guess the card:', value: description})
-            .setFooter('You have ' + this.gameTime / 60000 + ' minutes to guess the card.');
+        const embed = new Discord.MessageEmbed({
+            author: {name: 'Guess the card:'},
+            title,
+            description,
+            footer: {text: 'You have ' + this.gameTime / 60000 + ' minutes to guess the card.'}
+        });
 
         // game is over
         if (done || !missing.length || wrong > 6) {
@@ -106,17 +110,19 @@ class MtgHangman {
                 if (guess.includes(correct)){
                     // If they're correct, pretend we guessed all the letters individually
                     const embed = this.generateEmbed(
-                        game.body,
+                        game.card,
                         game.difficulty,
                         game.letters,
                         true,
-                        true
+                        true,
+                        game.wrongGuesses
                     );
                     game.message.edit('', {embed});
                     game.collector.stop('finished');
                     msg.react('✅');
                 }
                 else {
+                    game.wrongGuesses++;
                     msg.react('❎');
                 }
             }
@@ -171,9 +177,10 @@ class MtgHangman {
                     this.runningGames[id] = {
                         message: sentMessage,
                         collector: collector,
-                        body: body,
+                        card: body,
                         difficulty: difficulty,
-                        letters: letters
+                        letters: letters,
+                        wrongGuesses: 0
                     };
                 }).catch(() => {});
             }

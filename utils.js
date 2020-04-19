@@ -31,7 +31,7 @@ const prettyLog = ({guild, channel = {}, author = {}}, action, log = '') => {
 const updateServerCount = (bot) => {
     bot.user.setPresence({
         activity: {
-            name: 'MTG on '+ bot.guilds.size +' servers (' + bot.ws.shards.size + ' shards)',
+            name: 'MTG on '+ bot.guilds.cache.size +' servers (' + bot.ws.shards.size + ' shards)',
             type: 'PLAYING',
             url: 'https://github.com/bra1n/judgebot'
         }

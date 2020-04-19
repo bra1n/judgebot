@@ -34,7 +34,7 @@ class HangmanGame {
     handleLetter(char){
         // get emoji character (we only accept :regional_indicator_X: emojis)
         this.letters.add(char);
-        this.updateEmbed(id, false);
+        this.updateEmbed(false);
     }
 
     /**
@@ -46,14 +46,14 @@ class HangmanGame {
         const correct = this.card.name.toLowerCase();
         if (guess.includes(correct)){
             // If they're correct, pretend we guessed all the letters individually
-            this.updateEmbed(id, true);
+            this.updateEmbed(true);
             this.collector.stop('finished');
             msg.react('✅');
         }
         else {
             this.wrongGuesses++;
             msg.react('❎');
-            this.updateEmbed(id, false);
+            this.updateEmbed(false);
         }
     }
 
@@ -85,6 +85,8 @@ class HangmanGame {
         let wrong;
         let totalGuesses = this.letters.size + this.wrongGuesses;
 
+        const letterArr = Array.from(this.letters.values());
+
         // Allow guessing to force the correct answer
         if (forceCorrect) {
             missing = 0;
@@ -92,14 +94,14 @@ class HangmanGame {
         }
         else {
             // The total number of mistakes is the sum of the incorrect letters, and incorrect guesses
-            wrong = this.letters.values().filter(c => this.card.name.toLowerCase().indexOf(c) === -1).length + this.wrongGuesses;
-            missing = _.difference(_.uniq(this.card.name.replace(/[^a-z]/ig, '').toLowerCase().split('')), this.letters.values());
+            wrong = letterArr.filter(c => this.card.name.toLowerCase().indexOf(c) === -1).length + this.wrongGuesses;
+            missing = _.difference(_.uniq(this.card.name.replace(/[^a-z]/ig, '').toLowerCase().split('')), letterArr);
         }
 
-        const correctPercent = (1 - (wrong / (totalGuesses || 1))) * 100;
+        const correctPercent = Math.round((1 - (wrong / (totalGuesses || 1))) * 100);
 
         // generate embed title
-        const title = this.card.name.replace(/[a-z]/ig, c => this.letters.has(c.toLowerCase()) ? '⬚':c);
+        const title = this.card.name.replace(/[a-z]/ig, c => !this.letters.has(c.toLowerCase()) ? '⬚':c);
         let description = "";
         // hard is without mana cost
         if (this.difficulty !== 'hard') {
@@ -110,14 +112,14 @@ class HangmanGame {
             description += '**' + this.card.type_line + '**\n';
         }
 
-        description += '```' +
+        description += '```\n' +
             '   ____     \n' +
             `  |    |    Missing: ${missing.length} letter(s)\n` +
-            `  |    ${wrong > 0 ? 'o':' '}    Guessed: ${this.letters.values().join("").toUpperCase()}\n` +
+            `  |    ${wrong > 0 ? 'o':' '}    Guessed: ${letterArr.join("").toUpperCase()}\n` +
             `  |   ${wrong > 2 ? '/':' '}${wrong > 1 ? '|':' '}${wrong > 3 ? '\\':' '}   Correct: ${correctPercent}%\n` +
             `  |    ${wrong > 1 ? '|':' '}    \n` +
             `  |   ${wrong > 4 ? '/':' '} ${wrong > 5 ? '\\':' '}   \n` +
-            ' _|________```\n' +
+            ' _|________\n```\n' +
             'Use :regional_indicator_a::regional_indicator_b::regional_indicator_c: ... :regional_indicator_z: ' +
             'reactions to pick letters.';
 
@@ -185,13 +187,13 @@ class MtgHangman {
             // The user can !hangman guess Some Card Name
             if (first === 'guess'){
                 const guess = rest.join(' ').toLowerCase();
-                game.handleGuess(guess);
+                game.handleGuess(guess, msg);
             }
             else {
                 msg.channel.send('', {
                     embed: new Discord.MessageEmbed({
                         title: "Error",
-                        description: "You can only start one hangman game every " + this.gameTime / 60000 + " minutes.",
+                        description: "You can only start one hangman game every " + GAME_TIME / 60000 + " minutes.",
                         color: 0xff0000
                     })
                 });
@@ -211,6 +213,7 @@ class MtgHangman {
                 game.card = body;
                 const embed = game.generateEmbed();
                 return msg.channel.send('', {embed}).then(sentMessage => {
+                    game.message = sentMessage;
                     sentMessage.react('❓');
                     const collector = sentMessage.createReactionCollector(
                         ({emoji}) => emoji.name.charCodeAt(0) === 55356 && emoji.name.charCodeAt(1) >= 56806 && emoji.name.charCodeAt(1) <= 56831,
@@ -229,7 +232,6 @@ class MtgHangman {
                     });
                     
                     // Update the game object with pertinent information
-                    game.message = sentMessage;
                     game.collector = collector;
                 }).catch(() => {});
             }

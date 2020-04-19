@@ -24,8 +24,8 @@ const modules = [
 const bot = new Discord.Client({
     shardList: 'auto' ,
     shards: 'auto' ,
-    messageCacheMaxSize: 1,
-    messageCacheLifetime: 60,
+    messageCacheMaxSize: 100,
+    messageCacheLifetime: 60 * 10,
     messageSweepInterval: 90,
     disabledEvents: [
         'GUILD_UPDATE',
@@ -130,7 +130,7 @@ bot.on("message", msg => {
 
 /* Bot event listeners */
 bot.on('ready', () => {
-    log.info('Bot is ready! Username:', bot.user.username, '/ Servers:', bot.guilds.size );
+    log.info('Bot is ready! Username:', bot.user.username, '/ Servers:', bot.guilds.cache.size );
     utils.updateServerCount(bot);
 });
 

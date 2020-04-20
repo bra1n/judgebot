@@ -364,13 +364,15 @@ class MtgCardLoader {
                 // generate embed
                 this.generateEmbed(body.data, command, permission).then(embed => {
                     return msg.channel.send('', {embed});
-                }, err => log.error(err)).then(sentMessage => {
+                }, err => log.error(err)).then(async sentMessage => {
                     // add reactions for zoom and paging
-                    sentMessage.react('🔍').then(() => {
-                        if (body.data.length > 1) {
-                            sentMessage.react('⬅').then(() => sentMessage.react('➡'));
-                        }
-                    }).catch(() => {});
+                    if (!command.match(/^art/)){
+                      await sentMessage.react('🔍');
+                    }
+                    if (body.data.length > 1) {
+                      await sentMessage.react('⬅');
+                      await sentMessage.react('➡');
+                    }
 
                     const handleReaction = reaction => {
                         if (reaction.emoji.toString() === '⬅') {

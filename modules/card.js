@@ -271,6 +271,13 @@ class MtgCardLoader {
                 image: image
             });
 
+            // show crop art only
+            if (command.match(/^art/) && card.image_uris) {
+                embed.setImage(card.image_uris.art_crop);
+                embed.setDescription('🖌️ ' + card.artist);
+                embed.setThumbnail(null);
+            }
+            
             // add pricing, if requested
             if (command.match(/^price/) && card.prices) {
                 let prices = [];

@@ -35,6 +35,13 @@ class MtgCardLoader {
                 description: "Show the format legality for a card",
                 help: '',
                 examples: ["!legal divining top"]
+            },
+            art: {
+                aliases: [],
+                inline: true,
+                description: "Show just the art for a card",
+                help: '',
+                examples: ["!art lovisa coldeyes"]
             }
         };
         this.cardApi = "https://api.scryfall.com/cards/search?q=";
@@ -249,6 +256,13 @@ class MtgCardLoader {
                 image: card.zoom && card.image_uris ? {url: card.image_uris.normal} : null
             });
 
+            // show crop art only
+            if (command.match(/^art/) && card.image_uris) {
+                embed.setImage(card.image_uris.art_crop);
+                embed.setDescription('🖌️ ' + card.artist);
+                embed.setThumbnail(null);
+            }
+
             // add pricing, if requested
             if (command.match(/^price/) && card.prices) {
                 let prices = [];
@@ -342,13 +356,15 @@ class MtgCardLoader {
                 // generate embed
                 this.generateEmbed(body.data, command, permission).then(embed => {
                     return msg.channel.send('', {embed});
-                }, err => log.error(err)).then(sentMessage => {
+                }, err => log.error(err)).then(async sentMessage => {
                     // add reactions for zoom and paging
-                    sentMessage.react('🔍').then(() => {
-                        if (body.data.length > 1) {
-                            sentMessage.react('⬅').then(() => sentMessage.react('➡'));
-                        }
-                    }).catch(() => {});
+                    if (!command.match(/^art/)){
+                      await sentMessage.react('🔍');
+                    }
+                    if (body.data.length > 1) {
+                      await sentMessage.react('⬅');
+                      await sentMessage.react('➡');
+                    }
 
                     const handleReaction = reaction => {
                         if (reaction.emoji.toString() === '⬅') {

@@ -230,9 +230,6 @@ class MtgCardLoader {
             }
 
             let description = this.generateDescriptionText(card);
-            if (command.match(/^art/)) {
-                description = '🖌️' + card.artist
-            }
 
             // are we allowed to use custom emojis? cool, then do so, but make sure the title still fits
             if(hasEmojiPermission) {
@@ -248,18 +245,6 @@ class MtgCardLoader {
                 if (cards.length > 6) footer += '; ...';
             }
 
-            // image
-            let image = null
-            let thumbnail = null
-            if (card.image_uris) {
-                if (command.match(/^art/)) {
-                    image = {url: card.image_uris.art_crop}
-                } else {
-                    image = card.zoom ? {url: card.image_uris.normal} : null
-                    thumbnail = {url: card.image_uris.small}
-                }
-            }
-
             // instantiate embed object
             const embed = new Discord.MessageEmbed({
                 title,
@@ -267,8 +252,8 @@ class MtgCardLoader {
                 footer: {text: footer},
                 url: card.scryfall_uri,
                 color: this.getBorderColor(card.layout === 'transform' ? card.card_faces[0]:card),
-                thumbnail: thumbnail,
-                image: image
+                thumbnail: card.image_uris ? {url: card.image_uris.small} : null,
+                image: card.zoom && card.image_uris ? {url: card.image_uris.normal} : null
             });
 
             // show crop art only
@@ -277,7 +262,7 @@ class MtgCardLoader {
                 embed.setDescription('🖌️ ' + card.artist);
                 embed.setThumbnail(null);
             }
-            
+
             // add pricing, if requested
             if (command.match(/^price/) && card.prices) {
                 let prices = [];

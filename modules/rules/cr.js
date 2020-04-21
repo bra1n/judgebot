@@ -6,7 +6,7 @@ const log = utils.getLogger('cr');
 const Discord = require('discord.js');
 
 // Using the current CR as the default, not sure if they actually stick around once new ones are published
-const CR_ADDRESS = process.env.CR_ADDRESS || "https://media.wizards.com/2019/downloads/MagicCompRules%2020191004.txt";
+const CR_ADDRESS = process.env.CR_ADDRESS || "https://media.wizards.com/2020/downloads/MagicCompRules%2020200417.txt";
 
 class CR {
     constructor() {
@@ -39,7 +39,8 @@ class CR {
     }
 
     initCR(crText) {
-        crText = crText.replace(/\r/g, "");
+        // Standardise all linebreaks. \r\n → \n for pre-2020 rules, but for 2020 we have to \r → \n
+        crText = crText.replace(/\r\n/g, "\n").replace(/\r/g, '\n');
 
         let rulesText = crText.substring(crText.search("\nCredits\n") + 9).trim();
         const glossaryStartIndex = rulesText.search("\nGlossary\n") + 10;
@@ -48,7 +49,7 @@ class CR {
 
         this.glossary = this.parseGlossary(glossaryText);
         this.crData = this.parseRules(rulesText, this.glossary);
-        this.crData.description = crText.substr(0, crText.search("\nIntroduction\n")).match(/effective as of (.*)\./)[1];
+        this.crData.description = crText.match(/effective as of (.*?)\./)[1];
         log.info("CR Ready, effective "+this.crData.description);
     }
 

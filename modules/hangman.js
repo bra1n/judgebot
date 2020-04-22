@@ -211,6 +211,7 @@ class MtgHangman {
                         color: 0xff0000
                     })
                 });
+                return;
             }
         }
 

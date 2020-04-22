@@ -10,13 +10,15 @@ const GAME_TIME = 3*60*1000; // minutes
 
 class HangmanGame {
     constructor({
-                    id ,
+                    id,
+                    gameList,
                     message = null,
                     collector = null,
                     card = null,
                     difficulty = 'medium',
                 } = {}) {
         this.id = id;
+        this.gameList = gameList;
         this.message = message;
         this.collector = collector;
         this.card = card;
@@ -75,6 +77,9 @@ class HangmanGame {
         this.done = true;
         this.updateEmbed();
         this.collector.stop('finished');
+        
+        // remove guild / author ID from running games
+        delete this.gameList[this.id];
     }
 
     /**
@@ -248,7 +253,8 @@ class MtgHangman {
         // Create the new game
         const game = this.runningGames[id] = new HangmanGame({
             id: id,
-            difficulty: first
+            difficulty: first,
+            gameList: this.runningGames
         });
 
         // fetch data from API
@@ -267,12 +273,7 @@ class MtgHangman {
                         const char = String.fromCharCode(reaction.emoji.name.charCodeAt(1) - 56709);
                         game.handleLetter(char);
                     }).on('end', (collected, reason) => {
-                        // game is already over, don't edit message again
-                        if (reason !== "finished") {
-                            game.setDone();
-                        }
-                        // remove guild / author ID from running games
-                        delete this.runningGames[id];
+                        game.setDone();
                     });
                     
                     // Update the game object with pertinent information

@@ -80,7 +80,7 @@ class HangmanGame {
         this.done = true;
         this.gameSuccess = correct;
         this.updateEmbed();
-        this.collector.stop('finished');
+        this.collector.stop('cancelled');
 
         // remove guild / author ID from running games
         delete this.gameList[this.id];
@@ -279,7 +279,10 @@ class MtgHangman {
                         const char = String.fromCharCode(reaction.emoji.name.charCodeAt(1) - 56709);
                         game.handleLetter(char);
                     }).on('end', (collected, reason) => {
-                        game.setDone();
+                        // If we cancelled the collector, the game state has already been updated
+                        // If the time ran out, however, we know that the game was lost
+                        if (reason === 'time')
+                            game.setDone(false);
                     });
 
                     // Update the game object with pertinent information

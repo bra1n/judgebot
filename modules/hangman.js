@@ -34,6 +34,7 @@ class HangmanGame {
     handleLetter(char){
         // get emoji character (we only accept :regional_indicator_X: emojis)
         this.letters.add(char);
+        this.checkDone();
         this.updateEmbed(false);
     }
 
@@ -48,12 +49,22 @@ class HangmanGame {
             // If they're correct, pretend we guessed all the letters individually
             this.updateEmbed(true);
             this.collector.stop('finished');
-            msg.react('✅');
+            this.setDone();
         }
         else {
             this.wrongGuesses++;
             msg.react('❎');
+            this.checkDone();
             this.updateEmbed(false);
+        }
+    }
+
+    /**
+     * Checks if the game should finish
+     */
+    checkDone() {
+        if ((!this.missing.length) || this.wrong > 6) {
+            this.setDone();
         }
     }
 
@@ -72,6 +83,26 @@ class HangmanGame {
      */
     updateEmbed(forceCorrect = false){
         this.message.edit('', {embed: this.generateEmbed(forceCorrect)});
+    }
+
+    /**
+     * An array of letters that have not yet been guessed
+     * @returns {Array}
+     */
+    get missing(){
+        const letterArr = Array.from(this.letters.values());
+        return _.difference(_.uniq(this.card.name.replace(/[^a-z]/ig, '').toLowerCase().split('')), letterArr);
+    }
+
+    /**
+     * The number of wrong guesses made in this game
+     * @returns {number}
+     */
+    get wrong(){
+        const letterArr = Array.from(this.letters.values());
+        
+        // The total number of mistakes is the sum of the incorrect letters, and incorrect guesses
+        return letterArr.filter(c => this.card.name.toLowerCase().indexOf(c) === -1).length + this.wrongGuesses;
     }
     
     /**
@@ -93,9 +124,8 @@ class HangmanGame {
             wrong = 0;
         }
         else {
-            // The total number of mistakes is the sum of the incorrect letters, and incorrect guesses
-            wrong = letterArr.filter(c => this.card.name.toLowerCase().indexOf(c) === -1).length + this.wrongGuesses;
-            missing = _.difference(_.uniq(this.card.name.replace(/[^a-z]/ig, '').toLowerCase().split('')), letterArr);
+            missing = this.missing;
+            wrong = this.wrong;
         }
 
         const correctPercent = Math.round((1 - (wrong / (totalGuesses || 1))) * 100);
@@ -132,7 +162,7 @@ class HangmanGame {
         });
 
         // game is over
-        if (this.done || !missing.length || wrong > 6) {
+        if (this.done) {
             embed.setTitle(this.card.name);
             embed.setFooter(missing.length ? 'You failed to guess the card!':'You guessed the card!');
             embed.setURL(this.card.scryfall_uri);

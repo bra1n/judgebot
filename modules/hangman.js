@@ -158,7 +158,7 @@ class MtgHangman {
                 help: 'Selects a random Magic card, token or plane and shows you the ' +
                 'placeholders for each letter in its name. To guess a letter, add a reaction to the ' +
                 'Hangman-message of the bot. Reactions have to be selected among the regional indicators ' +
-                ':regional_indicator_a: to :regional_indicator_z:. You can also use "!hangman guess some card" ' +
+                ':regional_indicator_a: to :regional_indicator_z:. You can also use `!hangman guess some card` ' +
                 'to guess the card outright, but guessing wrongly will be penalised the same as a wrong letter. ' +
                 'You can only have one active game of ' +
                 'Hangman per Discord server, but you can also start an additional one in a private query.\n\n' +

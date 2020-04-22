@@ -16,7 +16,8 @@ For example: `I'm looking for !card tarmogoyf! and !card noble hierarch` would s
 - **!ruling \<partial cardname\>**: searches for an (English) card by name and outputs the Gatherer rulings for that card, *Example: !ruling Tarmogoyf*
 - **!stores \<location name\>**: searches for the closest Magic stores near the provided location, *Example: !stores new york*
 - **!events \<store name\>**: shows the next 6 Magic events for the provided store, *Example: !events funtainment*
-- **!hangman \<easy|medium|hard\>**: starts a game of Hangman where you guess a Magic card name with Discord reactions, *Example: !hangman easy*
+- **!hangman \<easy|medium|hard\>**: starts a game of Hangman where you guess a Magic card name with Discord reactions and the guess command, *Example: !hangman easy*
+    - **!hangman guess <cardname>**: makes an outright guess of the target card in an existing  game of Hangman, *Example: !hangman guess yare*
 - **!standard**: shows all sets that are currently legal in Standard
 - **!cr \<paragraph number\>**: shows the chosen paragraph from the [Comprehensive Rules](https://rules.wizards.com/rulebook.aspx?game=Magic&category=Game+Rules), *Example: !cr 100.6b*
 - **!define \<keyword\>**: shows the chosen keyword definition from the [Comprehensive Rules](https://rules.wizards.com/rulebook.aspx?game=Magic&category=Game+Rules), *Example: !define banding*

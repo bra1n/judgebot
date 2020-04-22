@@ -89,7 +89,7 @@ class HangmanGame {
 
         // Allow guessing to force the correct answer
         if (forceCorrect) {
-            missing = 0;
+            missing = [];
             wrong = 0;
         }
         else {
@@ -155,16 +155,18 @@ class MtgHangman {
                 aliases: [],
                 inline: false,
                 description: 'Start a game of hangman, where you have to guess the card name with reaction letters',
-                help: 'Selects a random Magic card, token oder plane and shows you the ' +
+                help: 'Selects a random Magic card, token or plane and shows you the ' +
                 'placeholders for each letter in its name. To guess a letter, add a reaction to the ' +
                 'Hangman-message of the bot. Reactions have to be selected among the regional indicators ' +
-                ':regional_indicator_a: to :regional_indicator_z:. You can only have one active game of ' +
+                ':regional_indicator_a: to :regional_indicator_z:. You can also use "!hangman guess some card" ' +
+                'to guess the card outright, but guessing wrongly will be penalised the same as a wrong letter. ' +
+                'You can only have one active game of ' +
                 'Hangman per Discord server, but you can also start an additional one in a private query.\n\n' +
                 '**Difficulty**:\n' +
                 'With an optional parameter you can select the difficulty. Available are `easy`, `medium` ' +
                 'and `hard`. Default is medium. "Easy" includes the mana cost and type line, "Medium" includes ' +
                 'the mana cost and "Hard" doesn\'t include any hints.',
-                examples: ["!hangman", "!hangman easy"]
+                examples: ["!hangman", "!hangman easy", "!hangman guess yare"]
             }
         };
         this.cardApi = "https://api.scryfall.com/cards/random";
@@ -199,6 +201,17 @@ class MtgHangman {
                 });
             }
             return;
+        } else {
+            // Handle the case where we "!hangman guess" but no game has started
+            if (first === 'guess') {
+                msg.channel.send('', {
+                    embed: new Discord.MessageEmbed({
+                        title: "Error",
+                        description: "No hangman game is currently running in this server. Guess ignored.",
+                        color: 0xff0000
+                    })
+                });
+            }
         }
 
         // Create the new game

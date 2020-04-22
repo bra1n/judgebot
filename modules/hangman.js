@@ -31,11 +31,11 @@ class HangmanGame {
     }
 
     /**
-     * Handle a user guessing a letter in the word
+     * Handle a user guessing a letter in the card name
      * @param {String} char The character that was guessed
      */
     handleLetter(char) {
-        // get emoji character (we only accept :regional_indicator_X: emojis)
+        // Letters is a set, which handles duplicates for us
         this.letters.add(char);
         this.checkDone();
         this.updateEmbed(false);
@@ -88,10 +88,9 @@ class HangmanGame {
 
     /**
      * Using the stored parameters, updates the embed for the specified game
-     * @param {Boolean} forceCorrect If true, force the game to be won
      */
-    updateEmbed(forceCorrect = false) {
-        this.message.edit('', {embed: this.generateEmbed(forceCorrect)});
+    updateEmbed() {
+        this.message.edit('', {embed: this.generateEmbed()});
     }
 
     /**
@@ -116,26 +115,14 @@ class HangmanGame {
 
     /**
      * Return a discord Embed derived from this game
-     * @param {Boolean} forceCorrect If true, force the game to be won
      * @returns {module:"discord.js".MessageEmbed}
      */
-    generateEmbed(forceCorrect = false) {
-        // count number of wrong letters and missing letters
-        let missing;
-        let wrong;
+    generateEmbed() {
+        const missing = this.missing;
+        const wrong = this.wrong;
         let totalGuesses = this.letters.size + this.wrongGuesses;
 
         const letterArr = Array.from(this.letters.values());
-
-        // Allow guessing to force the correct answer
-        if (forceCorrect) {
-            missing = [];
-            wrong = 0;
-        }
-        else {
-            missing = this.missing;
-            wrong = this.wrong;
-        }
 
         const correctPercent = Math.round((1 - (wrong / (totalGuesses || 1))) * 100);
 

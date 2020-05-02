@@ -47,4 +47,4 @@ node server.js
 - Card images are all copyright Wizards of the Coast.
 - Card database is provided by Scryfall.org.
 - This bot is not affiliated with Wizards of the Coast in any way.
-- The server is kindly provided by [SKnetworX](https://www.sknetworx.net)
+- The server is kindly provided by [SKnetworX](http://www.sknetworx.net)

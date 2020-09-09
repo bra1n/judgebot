@@ -222,9 +222,13 @@ class MtgCardLoader {
             }
 
             // DFC use card_faces array for each face
-            if (card.layout === 'transform' && card.card_faces) {
+            if (card.card_faces && (card.layout === 'transform' || card.layout === 'modal_dfc')) {
                 if (card.card_faces[0].mana_cost) {
                     title += ' ' + card.card_faces[0].mana_cost;
+                }
+                // Modal DFCs might have spells on both sides at some point so putting this here just in case
+                if (card.layout === 'modal_dfc' && card.card_faces[1].mana_cost) {
+                    title += ' // ' + card.card_faces[1].mana_cost;
                 }
                 card.image_uris = card.card_faces[0].image_uris;
             }
@@ -251,7 +255,7 @@ class MtgCardLoader {
                 description,
                 footer: {text: footer},
                 url: card.scryfall_uri,
-                color: this.getBorderColor(card.layout === 'transform' ? card.card_faces[0]:card),
+                color: this.getBorderColor(card.layout === 'transform' || card.layout === 'modal_dfc' ? card.card_faces[0]:card),
                 thumbnail: card.image_uris ? {url: card.image_uris.small} : null,
                 image: card.zoom && card.image_uris ? {url: card.image_uris.normal} : null
             });

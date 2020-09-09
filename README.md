@@ -41,3 +41,10 @@ node server.js
 
 ## Badges
 [![Code Climate](https://codeclimate.com/github/bra1n/judgebot/badges/gpa.svg)](https://codeclimate.com/github/bra1n/judgebot)
+
+## Acknowledgements
+
+- Card images are all copyright Wizards of the Coast.
+- Card database is provided by Scryfall.org.
+- This bot is not affiliated with Wizards of the Coast in any way.
+- The server is kindly provided by [SKnetworX](http://www.sknetworx.net)

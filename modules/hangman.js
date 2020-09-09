@@ -162,7 +162,7 @@ class HangmanGame {
             embed.setTitle(this.card.name);
             embed.setFooter(this.gameSuccess ? 'You guessed the card!' :'You failed to guess the card!');
             embed.setURL(this.card.scryfall_uri);
-            if (this.card.layout === 'transform' && this.card.card_faces && this.card.card_faces[0].image_uris) {
+            if ((this.card.layout === 'transform' || this.card.layout === 'modal_dfc') && this.card.card_faces && this.card.card_faces[0].image_uris) {
                 embed.setImage(this.card.card_faces[0].image_uris.normal);
             }
             else if (this.card.image_uris) {

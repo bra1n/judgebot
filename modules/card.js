@@ -169,7 +169,8 @@ class MtgCardLoader {
                     resolve(rulings.join('\n'));
                 }
                 resolve("");
-            }
+            });
+        });
         return requestPromise;
     }
 

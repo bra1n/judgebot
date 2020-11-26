@@ -153,18 +153,24 @@ class MtgCardLoader {
         return color;
     }
 
-    // parse Gatherer rulings
-    parseGathererRulings(gatherer) {
-        const $ = cheerio.load(gatherer);
-        const rulings = [];
-        $('.rulingsTable tr').each((index,elem) => {
-            rulings.push('**'+$(elem).find('td:nth-child(1)').text()+':** '+$(elem).find('td:nth-child(2)').text());
-            if (rulings.join('\n').length > 2040) {
-                rulings[rulings.length - 1] = '...';
-                return false;
+    // Load and render gatherer rulings from scryfall API
+    loadGathererRulings(rulings_uri) {
+        let requestPromise = new Promise((resolve, reject) => {
+            rp({url: rulings_uri, json: true}).then(body => {
+                if(body.data && body.data.length) {
+                    const rulings = []
+                    body.data.each((index, ruling) => {
+                        rulings.push('**' + ruling.published_at + ':** ' + ruling.comment);
+                        if (rulings.join('\n').length > 2040) {
+                            rulings[rulings.length - 1] = '...';
+                            return false;
+                        }
+                    });
+                    resolve(rulings.join('\n'));
+                }
+                resolve("");
             }
-        });
-        return rulings.join('\n');
+        return requestPromise;
     }
 
     // generate description text from a card object
@@ -284,11 +290,11 @@ class MtgCardLoader {
             }
 
             // add rulings loaded from Gatherer, if needed
-            if(command.match(/^ruling/) && card.related_uris.gatherer) {
-                rp(card.related_uris.gatherer).then(gatherer => {
-                    embed.setAuthor('Gatherer rulings for');
-                    embed.setDescription(this.parseGathererRulings(gatherer));
-                    resolve(embed);
+            if(command.match(/^ruling/) && card.rulings_uri) {
+                this.loadGathererRulings(card.rulings_uri).then(rulings => {
+                   embed.setAuthor('Gatherer rulings for');
+                   embed.setDescription(rulings);
+                   resolve(embed);
                 });
             } else {
                 resolve(embed);

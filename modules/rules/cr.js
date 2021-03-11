@@ -72,7 +72,7 @@ class CR {
     }
 
     parseRules(crText, glossaryEntries) {
-        const ruleNumberPrefixRe = /^(\d{3}\.\w*)(\.)?/;
+        const ruleNumberPrefixRe = /^(\d{3}\.\w*)\.?/;
         const crEntries = {};
 
         for (let entry of crText.split("\n\n")) {
@@ -80,7 +80,7 @@ class CR {
                 continue;
             }
             const number = entry.split(" ", 1)[0].replace(/\.$/, "");
-            entry = entry.replace(ruleNumberPrefixRe, "__**$1$2**__");
+            entry = entry.replace(ruleNumberPrefixRe, "__**$1**__");
             const newEntry = [];
             for (const word of entry.split(" ")) {
                 if (glossaryEntries[word]) {

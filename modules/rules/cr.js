@@ -90,7 +90,6 @@ class CR {
                 }
             }
             entry = this.highlightRules(newEntry.join(" "));
-						console.log( entry )
 
             crEntries[number] = '';
             entry.split('\n').forEach(line => {
@@ -127,7 +126,6 @@ class CR {
 
     handleMessage(command, parameter, msg) {
         // use only the first parameter
-				console.log(parameter)
         let params = parameter.trim().toLowerCase().split(" ").map(p => p.replace(/\.$/, ""));
 				// Does the rule end in "." ? If so, only add that rule's text, not 123.4X
 				let addSubrules = parameter.trim().toLowerCase().split(" ").every(function(u, i){return u !== params[i];});

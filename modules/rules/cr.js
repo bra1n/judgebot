@@ -72,7 +72,7 @@ class CR {
     }
 
     parseRules(crText, glossaryEntries) {
-        const ruleNumberPrefixRe = /^(\d{3}\.\w*)\.?/;
+        const ruleNumberPrefixRe = /^(\d{3}\.\w*)(\.)?/;
         const crEntries = {};
 
         for (let entry of crText.split("\n\n")) {
@@ -80,7 +80,7 @@ class CR {
                 continue;
             }
             const number = entry.split(" ", 1)[0].replace(/\.$/, "");
-            entry = entry.replace(ruleNumberPrefixRe, "__**$1**__");
+            entry = entry.replace(ruleNumberPrefixRe, "__**$1$2**__");
             const newEntry = [];
             for (const word of entry.split(" ")) {
                 if (glossaryEntries[word]) {
@@ -90,6 +90,7 @@ class CR {
                 }
             }
             entry = this.highlightRules(newEntry.join(" "));
+						console.log( entry )
 
             crEntries[number] = '';
             entry.split('\n').forEach(line => {
@@ -108,8 +109,11 @@ class CR {
         return text.replace(/rule \d{3}\.\w*\.?/ig, "`$&`");
     }
 
-    appendSubrules(parameter, length = this.maxLength) {
+    appendSubrules(parameter, addSubrules, length = this.maxLength) {
         let description = this.crData[parameter];
+				if (addSubrules) {
+				    return _.truncate(description, {length, separator: '\n'});
+				}
         if (description && this.crData[parameter + 'a']) {
             // keep looking for subrules, starting with "123a" and going until "123z" or we don't find another subrule
             for(let x = 'a'.charCodeAt(0); this.crData[parameter + String.fromCharCode(x)]; x++) {
@@ -123,7 +127,10 @@ class CR {
 
     handleMessage(command, parameter, msg) {
         // use only the first parameter
+				console.log(parameter)
         let params = parameter.trim().toLowerCase().split(" ").map(p => p.replace(/\.$/, ""));
+				// Does the rule end in "." ? If so, only add that rule's text, not 123.4X
+				let addSubrules = parameter.trim().toLowerCase().split(" ").every(function(u, i){return u !== params[i];});
 
         // prepare embed
         const embed = new Discord.MessageEmbed({
@@ -138,7 +145,7 @@ class CR {
             // in case there is a second parameter "ex", append it
             if (params[1] === "ex") params[0] += ' ex';
             embed.setTitle('CR - Rule ' + params[0].replace(/ ex$/,' Examples'))
-                .setDescription(this.appendSubrules(params[0]))
+                .setDescription(this.appendSubrules(params[0],addSubrules))
                 .setURL(this.location + params[0].substr(0,3) + '/');
             if (this.crData[params[0] + ' ex']) {
                 embed.setFooter('Use "!'+Object.keys(this.commands)[0]+' '+params[0]+' ex" to see examples.');
@@ -152,7 +159,7 @@ class CR {
                         .setURL(this.location + '/cr-glossary/');
                     const rule = this.glossary[params.join(" ")].match(/rule (\d+\.\w+)/i);
                     if (rule && this.crData[rule[1]]) {
-                        embed.addField('CR - Rule '+rule[1], this.appendSubrules(rule[1], 1020));
+                        embed.addField('CR - Rule '+rule[1], this.appendSubrules(rule[1],addSubrules, 1020));
                     }
                     break;
                 }

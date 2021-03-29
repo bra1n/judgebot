@@ -18,9 +18,9 @@ class CR {
                 examples: ["!cr 508.1d", "!rule 702.15", "!define lifelink"]
             }
         };
-        this.location = "http://blogs.magicjudges.org/rules/cr";
+        this.location = "http://vensersjournal.com/";
         this.glossary = {};
-        this.thumbnail = 'https://assets.magicjudges.org/judge-banner/images/magic-judge.png';
+        this.thumbnail = 'https://c1.scryfall.com/file/scryfall-cards/art_crop/front/7/c/7cf33db9-6e34-4772-a533-ef09b4066e54.jpg?1562407276';
         this.crData = {};
         this.maxLength = 2040;
 
@@ -144,7 +144,7 @@ class CR {
             if (params[1] === "ex") params[0] += ' ex';
             embed.setTitle('CR - Rule ' + params[0].replace(/ ex$/,' Examples'))
                 .setDescription(this.appendSubrules(params[0],addSubrules))
-                .setURL(this.location + params[0].substr(0,3) + '/');
+                .setURL(this.location + params[0] + '/');
             if (this.crData[params[0] + ' ex']) {
                 embed.setFooter('Use "!'+Object.keys(this.commands)[0]+' '+params[0]+' ex" to see examples.');
             }

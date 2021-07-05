@@ -196,7 +196,7 @@ class MtgHangman {
                 examples: ['!hangman', '!hangman easy', '!hangman guess yare']
             }
         };
-        this.cardApi = 'https://api.scryfall.com/cards/random';
+        this.cardApi = 'https://api.scryfall.com/cards/random?q=not%3Areprint+include%3Aextras';
         this.runningGames = {};
     }
 

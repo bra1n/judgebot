@@ -5,6 +5,8 @@ const utils = require("./utils");
 const log = utils.getLogger('bot');
 log.info(`booting up...`);
 
+require('dotenv').config()
+
 // basic server stuff, modules to load
 const commandChar = process.env.COMMAND_CHAR || "!";
 const spamTimeout = 3000; // milliseconds

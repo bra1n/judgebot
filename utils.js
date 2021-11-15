@@ -37,6 +37,10 @@ const updateInteractions = () => {
         headers: {'Authorization': process.env.BOT_TOKEN},
         body: interactions,
         json: true
+    }).on('error', err => {
+        console.error(err)
+    }) .on('data', data => {
+        console.log(data.toString())
     });
 }
 

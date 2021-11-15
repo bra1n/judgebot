@@ -4,6 +4,7 @@ const Discord = require("discord.js");
 const utils = require("../utils");
 const log = utils.getLogger('card');
 const cheerio = require("cheerio");
+const { SlashCommandBuilder } = require('@discordjs/builders');
 
 class MtgCardLoader {
     constructor() {
@@ -124,6 +125,71 @@ class MtgCardLoader {
         };
         // cache for Discord permission lookup
         this.permissionCache = {};
+    }
+
+    /**
+     * Compile data about each interaction supported by this class
+     */
+    getInteractions() {
+        // This is a common parameter used by all interactions
+        const scryfallSearchTerm = option => option
+            .setName("search_term")
+            .setDescription("Scryfall search term")
+            .setRequired(true);
+
+        // Currently, we handle all interactions by just treating them like messages
+        const handleInteraction = interaction => {
+            this.handleCommand(
+                "card",
+                interaction.options.data.filter(option => option.name === 'search_term').value,
+                interaction.channel,
+                interaction.user
+            )
+        };
+
+        // Returns a dictionary of dictionaries.
+        // The outer dictionary is indexed by the command name.
+        // The inner dictionary has parser, which returns the SlashCommandBuilder, and response, which is a function
+        // for handling that interaction
+        return {
+            card: {
+                parser: new SlashCommandBuilder()
+                    .setName("card")
+                    .setDescription("Search for an English Magic card by (partial) name, supports full Scryfall syntax")
+                    .addStringOption(scryfallSearchTerm),
+                response: handleInteraction
+            },
+            price: {
+                parser: new SlashCommandBuilder()
+                    .setName("price")
+                    .setDescription("Show the price in USD, EUR and TIX for a card")
+                    .addStringOption(scryfallSearchTerm),
+                response: handleInteraction
+            },
+            rulings: {
+             parser: new SlashCommandBuilder()
+                     .setName("rulings")
+                     .setDescription("Show the Gatherer rulings for a card")
+                     .addStringOption(scryfallSearchTerm),
+                response: handleInteraction
+            },
+            legality: {
+                parser:
+                    new SlashCommandBuilder()
+                        .setName("legality")
+                        .setDescription("Show the format legality for a card")
+                        .addStringOption(scryfallSearchTerm),
+                response: handleInteraction
+            },
+            art: {
+                parser:
+                    new SlashCommandBuilder()
+                        .setName("art")
+                        .setDescription("Show just the art for a card")
+                        .addStringOption(scryfallSearchTerm),
+                response: handleInteraction
+            }
+        }
     }
 
     getCommands() {
@@ -342,13 +408,13 @@ class MtgCardLoader {
     }
 
     /**
-     * Handle an incoming message
-     * @param command
-     * @param parameter
-     * @param msg
-     * @returns {Promise}
+     * Handles a generic command ie either a message or an interaction
+     * @param command "card", "art" etc
+     * @param parameter Scryfall search term
+     * @param channel Channel object in which to interact
+     * @param author User object to respond to
      */
-    handleMessage(command, parameter, msg) {
+    handleCommand(command, parameter, channel, author){
         const cardName = parameter.toLowerCase();
         // no card name, no lookup
         if (!cardName) return;
@@ -359,15 +425,15 @@ class MtgCardLoader {
             if (body.data && body.data.length) {
                 // generate embed
                 this.generateEmbed(body.data, command, permission).then(embed => {
-                    return msg.channel.send('', {embed});
+                    return channel.send('', {embed});
                 }, err => log.error(err)).then(async sentMessage => {
                     // add reactions for zoom and paging
                     if (!command.match(/^art/)){
-                      await sentMessage.react('🔍');
+                        await sentMessage.react('🔍');
                     }
                     if (body.data.length > 1) {
-                      await sentMessage.react('⬅');
-                      await sentMessage.react('➡');
+                        await sentMessage.react('⬅');
+                        await sentMessage.react('➡');
                     }
 
                     const handleReaction = reaction => {
@@ -386,7 +452,7 @@ class MtgCardLoader {
                     }
 
                     sentMessage.createReactionCollector(
-                        ({emoji} , user) => ['⬅','➡','🔍'].indexOf(emoji.toString()) > -1 && user.id === msg.author.id,
+                        ({emoji} , user) => ['⬅','➡','🔍'].indexOf(emoji.toString()) > -1 && user.id === author.id,
                         {time: 60000, max: 20}
                     ).on('collect', handleReaction).on('remove', handleReaction);
                 }, err => log.error(err)).catch(() => {});
@@ -396,12 +462,23 @@ class MtgCardLoader {
             if (err.statusCode === 503) {
                 description = 'Scryfall is currently offline, please try again later.'
             }
-            return msg.channel.send('', {embed: new Discord.MessageEmbed({
-                title: 'Error',
-                description,
-                color: 0xff0000
-            })});
+            return channel.send('', {embed: new Discord.MessageEmbed({
+                    title: 'Error',
+                    description,
+                    color: 0xff0000
+                })});
         });
+    }
+
+    /**
+     * Handle an incoming message
+     * @param command
+     * @param parameter
+     * @param msg
+     * @returns {Promise}
+     */
+    handleMessage(command, parameter, msg) {
+        return this.handleCommand(command, parameter, msg.channel, msg.author)
     }
 }
 

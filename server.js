@@ -8,17 +8,6 @@ log.info(`booting up...`);
 // basic server stuff, modules to load
 const commandChar = process.env.COMMAND_CHAR || "!";
 const spamTimeout = 3000; // milliseconds
-const modules = [
-    'card',
-    'hangman',
-    'standard',
-    // 'store',
-    'rules/cr',
-    'rules/ipg',
-    'rules/mtr',
-    'rules/jar',
-    'help'
-];
 
 // initialize the bot and all modules
 const bot = new Discord.Client({
@@ -56,13 +45,16 @@ const bot = new Discord.Client({
 });
 const handlers = {};
 const commands = {};
+// Interactions, ie slash commands
+// This maps slash command names to handler functions
+const interactionLookup = {};
 
-modules.forEach((module, index) => {
+utils.modules.forEach((module, index) => {
     // eslint-disable-line global-require
-    const moduleObject = new (require("./modules/" + module + '.js'))(modules);
+    const moduleObject = new (require("./modules/" + module + '.js'))(utils.modules);
     if(moduleObject) {
         log.info("Successfully initialized module", module);
-        modules[index] = moduleObject;
+        utils.modules[index] = moduleObject;
         _.forEach(moduleObject.getCommands(), (commandObj, command) => {
             handlers[command] = moduleObject;
             commands[command] = commandObj;
@@ -74,6 +66,13 @@ modules.forEach((module, index) => {
                 });
             }
         });
+
+        if (moduleObject.hasOwnProperty("getInteractions")){
+            _.forEach(moduleObject, (value, key) => {
+                interactionLookup[key] = value.response
+                interactionDetails.push(value.parser.toJSON())
+            });
+        }
     } else {
         log.error("Couldn't initialize module", module);
     }
@@ -125,6 +124,16 @@ bot.on("message", msg => {
             // if ret is undefined or not a thenable this just returns a resolved promise and the callback won't be called
             Promise.resolve(ret).catch(e => log.error('An error occured while handling', msg.content, ":", e.message));
         });
+    }
+});
+
+bot.on('interactionCreate', interaction => {
+    if (!interaction.isCommand()) return;
+
+    if (interaction.commandName in interactionLookup){
+        // Pass the interaction to each handler function
+        // See full API here: https://discord.js.org/#/docs/main/stable/class/CommandInteraction
+        interactionLookup[interaction.commandName](interaction)
     }
 });
 

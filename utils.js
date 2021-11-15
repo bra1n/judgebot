@@ -1,6 +1,44 @@
 const log4js = require("log4js");
 const request = require("request");
 const chalk = require("chalk");
+const _ = require("lodash");
+
+const modules = [
+    'card',
+    'hangman',
+    'standard',
+    // 'store',
+    'rules/cr',
+    'rules/ipg',
+    'rules/mtr',
+    'rules/jar',
+    'help'
+];
+
+const APP_ID = "240537940378386442"
+
+/**
+ * Update discord's list of our slash commands
+ */
+const updateInteractions = () => {
+    const interactions = [];
+    modules.forEach((module, index) => {
+        const moduleObject = new (require("./modules/" + module + '.js'))(modules);
+            if ("getInteractions" in moduleObject){
+                _.forEach(moduleObject.getInteractions(), (value, key) => {
+                    interactions.push(value.parser.toJSON())
+                });
+            }
+    });
+
+    request({
+        url: `https://discord.com/api/v8/applications/${APP_ID}/commands`,
+        method: 'PUT',
+        headers: {'Authorization': process.env.BOT_TOKEN},
+        body: interactions,
+        json: true
+    });
+}
 
 // setup logger
 const getLogger = (name) => {
@@ -61,5 +99,7 @@ const updateServerCount = (bot) => {
 module.exports = {
     getLogger,
     prettyLog,
-    updateServerCount
+    updateServerCount,
+    modules,
+    updateInteractions
 }

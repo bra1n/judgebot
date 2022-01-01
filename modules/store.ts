@@ -1,10 +1,28 @@
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'rp'.
 const rp = require("request-promise-native");
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'Discord'.
 const Discord = require("discord.js");
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'utils'.
 const utils = require("../utils");
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'log'.
 const log = utils.getLogger('locator');
 const Fuse = require("fuse.js");
 
 class StoreLocator {
+    commands: any;
+    eventFormatDictionary: any;
+    eventFormats: any;
+    eventTypes: any;
+    eventsLocator: any;
+    geocoder: any;
+    googleStaticMap: any;
+    googleStaticMapStandardMarkup: any;
+    storeLevels: any;
+    storeLocator: any;
+    storeSearch: any;
+    stores: any;
+    wizardsSearchUrl: any;
+    wizardsStoreUrl: any;
     constructor() {
         this.geocoder = 'https://maps.googleapis.com/maps/api/geocode/json?new_forward_geocoder=true&key=' + process.env.GOOGLE_TOKEN + '&address=';
         this.googleStaticMap = 'https://maps.googleapis.com/maps/api/staticmap?scale=2&size=640x320&maptype=' +
@@ -144,10 +162,14 @@ class StoreLocator {
                 bounds: {northeast: {lat: 85, lng: longitude + distance}, southwest: {lat: -85, lng: longitude}}
             }, 5000),
             json: true
-        }).then(response => {
+        }).then((response: any) => {
             let count = 0;
             if (response.d.Results) {
-                response.d.Results.forEach(({Address, Organization, IsStore}) => {
+                response.d.Results.forEach(({
+                    Address,
+                    Organization,
+                    IsStore
+                }: any) => {
                     if (IsStore && Organization) {
                         count++;
                         delete Organization.__type;
@@ -160,10 +182,10 @@ class StoreLocator {
             }
             log.info(`retrieved ${count} stores between ${longitude} and ${longitude + distance} longitude`);
             this.fetchStores(longitude + distance);
-        }, err => log.error(err));
+        }, (err: any) => log.error(err));
     }
 
-    generateStoreRequestBody(geometry, count = 10) {
+    generateStoreRequestBody(geometry: any, count = 10) {
         let requestBody = {
             count,
             filter_mass_markets: true,
@@ -202,8 +224,8 @@ class StoreLocator {
      * @param lon2
      * @returns {number}
      */
-    getDistance(lat1, lon1, lat2, lon2) {
-        const deg2rad = (deg) => deg * (Math.PI/180)
+    getDistance(lat1: any, lon1: any, lat2: any, lon2: any) {
+        const deg2rad = (deg: any) => deg * (Math.PI/180)
         const R = 6371; // Radius of the earth in km
         const dLat = deg2rad(lat2-lat1);  // deg2rad below
         const dLon = deg2rad(lon2-lon1);
@@ -222,9 +244,9 @@ class StoreLocator {
      * @param location
      * @returns {Promise.<TResult>}
      */
-    locateStores(location) {
+    locateStores(location: any) {
         const count = 10; // number of "stores" to retrieve (error margin included for non-store results)
-        return rp({url: this.geocoder + encodeURIComponent(location), json: true}).then(googleBody => {
+        return rp({url: this.geocoder + encodeURIComponent(location), json: true}).then((googleBody: any) => {
             if (googleBody.results !== null && googleBody.results.length > 0) {
                 if (!this.storeSearch || !this.stores.length) {
                     // if stores are not cached yet, use live results (slow!)
@@ -233,8 +255,8 @@ class StoreLocator {
                         url: this.storeLocator,
                         body: this.generateStoreRequestBody(googleBody.results[0].geometry, count),
                         json: true
-                    }).then(wizardsBody => this.generateStoreEmbed(wizardsBody.d.Results, googleBody.results[0]),
-                        err => this.generateErrorEmbed(err, "Couldn't retrieve stores from Wizards."));
+                    }).then((wizardsBody: any) => this.generateStoreEmbed(wizardsBody.d.Results, googleBody.results[0]),
+                        (err: any) => this.generateErrorEmbed(err, "Couldn't retrieve stores from Wizards."));
                 } else {
                     // use cached stores to calculate closest stores
                     const location = {
@@ -243,7 +265,7 @@ class StoreLocator {
                     }
                     // create a copy of stores and sort it by distance to our location
                     let results = this.stores.slice();
-                    results.sort((a, b) =>
+                    results.sort((a: any, b: any) =>
                         this.getDistance(a.Address.Latitude, a.Address.Longitude, location.lat, location.lng) -
                         this.getDistance(b.Address.Latitude, b.Address.Longitude, location.lat, location.lng));
                     return this.generateStoreEmbed(results.slice(0, count), googleBody.results[0]);
@@ -251,13 +273,17 @@ class StoreLocator {
             } else {
                 return this.generateErrorEmbed(null, `Location \`${location}\` not found.`);
             }
-        }, err => this.generateErrorEmbed(err, "Couldn't retrieve location from Google."));
+        }, (err: any) => this.generateErrorEmbed(err, "Couldn't retrieve location from Google."));
     }
 
-    generateStoreEmbed(stores, googleResult) {
-        const fields = [];
+    generateStoreEmbed(stores: any, googleResult: any) {
+        const fields: any = [];
         const googleStaticMap = [this.googleStaticMap];
-        stores.forEach(({Address, Organization, IsStore}) => {
+        stores.forEach(({
+            Address,
+            Organization,
+            IsStore
+        }: any) => {
             // only take the first 6 stores
             if (!IsStore || fields.length > 5) return;
             // calculate distance in KM
@@ -275,17 +301,16 @@ class StoreLocator {
                 `${Address.PostalCode} ${Address.City} ${Address.CountryName}`);
         });
         // fetch map from google
-        return rp({url: encodeURI(googleStaticMap.join("")), encoding: null}).then(body =>
-            new Discord.MessageEmbed({
-                title: `Stores closest to ${googleResult.formatted_address}`,
-                description: `:link: [Wizards Store Locator results](${this.wizardsSearchUrl}${encodeURIComponent(googleResult.formatted_address)})`,
-                file: fields.length ? { // only show map if there are actual stores
-                    attachment: body,
-                    name: "location.png"
-                } : null,
-                fields: fields,
-                color: fields.length ? 0x00ff00 : 0xff0000
-            })
+        return rp({url: encodeURI(googleStaticMap.join("")), encoding: null}).then((body: any) => new Discord.MessageEmbed({
+            title: `Stores closest to ${googleResult.formatted_address}`,
+            description: `:link: [Wizards Store Locator results](${this.wizardsSearchUrl}${encodeURIComponent(googleResult.formatted_address)})`,
+            file: fields.length ? { // only show map if there are actual stores
+                attachment: body,
+                name: "location.png"
+            } : null,
+            fields: fields,
+            color: fields.length ? 0x00ff00 : 0xff0000
+        })
         );
 
     }
@@ -294,15 +319,17 @@ class StoreLocator {
      * Find all events for a store, optionally filtered by the first parameter word
      * @param query
      */
-    getEvents(query) {
+    getEvents(query: any) {
         // check if there are filters present
         const filters = {};
         let parameters = query.toLowerCase().split(" ");
         while (parameters.length > 1) {
             let filter = parameters.shift();
             if(this.eventTypes[filter]) {
+                // @ts-expect-error ts-migrate(2339) FIXME: Property 'type' does not exist on type '{}'.
                 filters.type = this.eventTypes[filter];
             } else if (this.eventFormats[filter]) {
+                // @ts-expect-error ts-migrate(2339) FIXME: Property 'format' does not exist on type '{}'.
                 filters.format = this.eventFormats[filter];
             } else {
                 parameters.unshift(filter);
@@ -328,8 +355,8 @@ class StoreLocator {
                     }
                 },
                 json: true
-            }).then(events => this.generateEventsEmbed(stores[0], events, filters),
-                (err) => this.generateErrorEmbed(err, 'Error loading events from Wizards.'))
+            }).then((events: any) => this.generateEventsEmbed(stores[0], events, filters),
+                (err: any) => this.generateErrorEmbed(err, 'Error loading events from Wizards.'));
         } else {
             return new Promise(resolve => resolve(this.generateErrorEmbed(null, "No store found for `"+query+"`")));
         }
@@ -343,24 +370,28 @@ class StoreLocator {
      * @param filters
      * @returns {"discord.js".MessageEmbed}
      */
-    generateEventsEmbed({Address, Organization}, response, filters) {
+    generateEventsEmbed({
+        Address,
+        Organization
+    }: any, response: any, filters: any) {
         // helper function to extract a date
-        const getDate = (event) => new Date(parseFloat(event.StartDate.replace(/.*?(\d+)-.*/,'$1')));
+        const getDate = (event: any) => new Date(parseFloat(event.StartDate.replace(/.*?(\d+)-.*/,'$1')));
         let footer = [];
-        const fields = [];
+        const fields: any = [];
         if (response && response.d && response.d.Result && response.d.Result.EventsAtVenue) {
             // merge events at venue with events outside of venue and sort by date
             let events = response.d.Result.EventsAtVenue.concat(response.d.Result.EventsNotAtVenue);
             if (filters.type) {
-                events = events.filter(event => event.EventTypeCode === filters.type);
+                events = events.filter((event: any) => event.EventTypeCode === filters.type);
                 footer.push('type');
             }
             if (filters.format) {
-                events = events.filter(event => event.PlayFormatCode === filters.format);
+                events = events.filter((event: any) => event.PlayFormatCode === filters.format);
                 footer.push('format');
             }
-            events.sort((a,b) => getDate(a) - getDate(b));
-            events.forEach(event => {
+            // @ts-expect-error ts-migrate(2362) FIXME: The left-hand side of an arithmetic operation must... Remove this comment to see the full error message
+            events.sort((a: any,b: any) => getDate(a) - getDate(b));
+            events.forEach((event: any) => {
                 if (fields.length > 5) return;
                 const eventDate = getDate(event);
                 // if the event is at a different location, link to it
@@ -397,7 +428,7 @@ class StoreLocator {
      * @param Organization
      * @returns {string}
      */
-    generateStoreDescription(Address, Organization) {
+    generateStoreDescription(Address: any, Organization: any) {
         const storeUrl = Organization.PrimaryUrl || Organization.CommunityUrl;
         const eventUrl = encodeURI(`${this.wizardsStoreUrl}p=${Address.City},+${Address.CountryName}&c=${Address.Latitude},` +
             `${Address.Longitude}&loc=${Address.Id}&orgid=${Organization.Id}&addrid=${Address.Id}`);
@@ -419,7 +450,7 @@ class StoreLocator {
      * @param description
      * @returns {"discord.js".MessageEmbed}
      */
-    generateErrorEmbed(error, description) {
+    generateErrorEmbed(error: any, description: any) {
         if(error) {
             log.error(description, error);
         }
@@ -430,16 +461,15 @@ class StoreLocator {
         });
     }
 
-    handleMessage(command, parameter, msg) {
+    handleMessage(command: any, parameter: any, msg: any) {
         if (command === 'stores' || this.commands.stores.aliases.indexOf(command) > -1) {
             // locate stores
             if (parameter) {
                 return msg.channel.send('', {embed: new Discord.MessageEmbed({
                     title: "Store & Event Locator",
                     description: "Looking up stores near `"+parameter+"`..."
-                })}).then(sentMessage =>
-                    this.locateStores(parameter)
-                        .then(embed => msg.channel.send("", {embed}).then(() => sentMessage.delete()))
+                })}).then((sentMessage: any) => this.locateStores(parameter)
+                    .then((embed: any) => msg.channel.send("", {embed}).then(() => sentMessage.delete()))
                 );
             } else {
                 return msg.channel.send('', {
@@ -450,7 +480,7 @@ class StoreLocator {
             // show events
             if (parameter) {
                 if (this.storeSearch) {
-                    return this.getEvents(parameter).then(embed => msg.channel.send('', {embed}));
+                    return this.getEvents(parameter).then((embed: any) => msg.channel.send('', {embed}));
                 } else {
                     return msg.channel.send('', {
                         embed: this.generateErrorEmbed(null, "The list of stores is currently reloading, please wait a few more minutes.")

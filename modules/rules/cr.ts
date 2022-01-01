@@ -1,13 +1,24 @@
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable '_'.
 const _ = require('lodash');
 const iconv = require('iconv-lite');
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'request'.
 const request = require("request");
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'utils'.
 const utils = require("../../utils");
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'log'.
 const log = utils.getLogger('cr');
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'Discord'.
 const Discord = require('discord.js');
 
 const CR_ADDRESS = process.env.CR_ADDRESS || "http://cr.vensersjournal.com";
 
 class CR {
+    commands: any;
+    crData: any;
+    glossary: any;
+    location: any;
+    maxLength: any;
+    thumbnail: any;
     constructor() {
         this.commands = {
             cr: {
@@ -24,7 +35,7 @@ class CR {
         this.crData = {};
         this.maxLength = 2040;
 
-        request({url: CR_ADDRESS, encoding: null}, (error, response, body) => {
+        request({url: CR_ADDRESS, encoding: null}, (error: any, response: any, body: any) => {
             if (!error && response.statusCode === 200 && body) {
                 this.initCR(iconv.decode(body, 'utf-8'));
             } else {
@@ -37,7 +48,7 @@ class CR {
         return this.commands;
     }
 
-    initCR(crText) {
+    initCR(crText: any) {
         // Standardise all linebreaks. \r\n → \n for pre-2020 rules, but for 2020 we have to \r → \n
         crText = crText.replace(/\r\n/g, "\n").replace(/\r/g, '\n');
 
@@ -52,7 +63,7 @@ class CR {
         log.info("CR Ready, effective "+this.crData.description);
     }
 
-    parseGlossary(glossaryText) {
+    parseGlossary(glossaryText: any) {
         const glossaryEntries = {};
 
         for (const entry of glossaryText.split("\n\n")) {
@@ -65,13 +76,14 @@ class CR {
             }
             definition = `**${term}**\n${this.highlightRules(definition.join("\n"))}`;
             for (const t of term.split(",")) {
+                // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                 glossaryEntries[t.trim().toLowerCase()] = definition;
             }
         }
         return glossaryEntries;
     }
 
-    parseRules(crText, glossaryEntries) {
+    parseRules(crText: any, glossaryEntries: any) {
         const ruleNumberPrefixRe = /^(\d{3}\.\w*)\.?/;
         const crEntries = {};
 
@@ -91,12 +103,16 @@ class CR {
             }
             entry = this.highlightRules(newEntry.join(" "));
 
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             crEntries[number] = '';
-            entry.split('\n').forEach(line => {
+            entry.split('\n').forEach((line: any) => {
                 if (line.match(/^Example: /i)) {
+                    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                     if (!crEntries[number+' ex']) crEntries[number+' ex'] = '';
+                    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                     crEntries[number+' ex'] += line.replace(/^Example: /i, '**Example:** ') + '\n\n';
                 } else {
+                    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                     crEntries[number] += line + '\n';
                 }
             })
@@ -104,11 +120,11 @@ class CR {
         return crEntries;
     }
 
-    highlightRules(text) {
+    highlightRules(text: any) {
         return text.replace(/rule \d{3}\.\w*\.?/ig, "`$&`");
     }
 
-    appendSubrules(parameter, length = this.maxLength) {
+    appendSubrules(parameter: any, length = this.maxLength) {
         let description = this.crData[parameter];
         if (description && this.crData[parameter + 'a']) {
             // keep looking for subrules, starting with "123a" and going until "123z" or we don't find another subrule
@@ -121,9 +137,9 @@ class CR {
         return _.truncate(description, {length, separator: '\n'});
     }
 
-    handleMessage(command, parameter, msg) {
+    handleMessage(command: any, parameter: any, msg: any) {
         // use only the first parameter
-        let params = parameter.trim().toLowerCase().split(" ").map(p => p.replace(/\.$/, ""));
+        let params = parameter.trim().toLowerCase().split(" ").map((p: any) => p.replace(/\.$/, ""));
 
         // prepare embed
         const embed = new Discord.MessageEmbed({

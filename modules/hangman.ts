@@ -1,7 +1,12 @@
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'rp'.
 const rp = require('request-promise-native');
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable '_'.
 const _ = require('lodash');
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'Discord'.
 const Discord = require('discord.js');
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'utils'.
 const utils = require('../utils');
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'log'.
 const log = utils.getLogger('hangman');
 const Card = require('./card');
 const cardFetcher = new Card();
@@ -9,14 +14,24 @@ const cardFetcher = new Card();
 const GAME_TIME = 3 * 60 * 1000; // minutes
 
 class HangmanGame {
+    card: any;
+    collector: any;
+    difficulty: any;
+    done: any;
+    gameList: any;
+    gameSuccess: any;
+    id: any;
+    letters: any;
+    message: any;
+    wrongGuesses: any;
     constructor({
-                    id,
-                    gameList,
-                    message = null,
-                    collector = null,
-                    card = null,
-                    difficulty = 'medium',
-                } = {}) {
+        id,
+        gameList,
+        message = null,
+        collector = null,
+        card = null,
+        difficulty = 'medium'
+    }: any = {}) {
         this.id = id;
         this.gameList = gameList;
         this.message = message;
@@ -34,10 +49,11 @@ class HangmanGame {
      * Handle a user guessing a letter in the card name
      * @param {String} char The character that was guessed
      */
-    handleLetter(char) {
+    handleLetter(char: any) {
         // Letters is a set, which handles duplicates for us
         this.letters.add(char);
         this.checkDone();
+        // @ts-expect-error ts-migrate(2554) FIXME: Expected 0 arguments, but got 1.
         this.updateEmbed(false);
     }
 
@@ -46,7 +62,7 @@ class HangmanGame {
      * @param {String} guess
      * @param {Discord.Message} msg
      */
-    handleGuess(guess, msg) {
+    handleGuess(guess: any, msg: any) {
         const correct = this.card.name.toLowerCase();
         if (guess.includes(correct)) {
             // If they're correct, pretend we guessed all the letters individually
@@ -127,7 +143,7 @@ class HangmanGame {
         const correctPercent = Math.round((1 - (wrong / (totalGuesses || 1))) * 100);
 
         // generate embed title
-        const title = this.card.name.replace(/[a-z]/ig, c => !this.letters.has(c.toLowerCase()) ? '⬚' : c);
+        const title = this.card.name.replace(/[a-z]/ig, (c: any) => !this.letters.has(c.toLowerCase()) ? '⬚' : c);
         let description = '';
         // hard is without mana cost
         if (this.difficulty !== 'hard') {
@@ -176,6 +192,9 @@ class HangmanGame {
 }
 
 class MtgHangman {
+    cardApi: any;
+    commands: any;
+    runningGames: any;
     constructor() {
         this.commands = {
             hangman: {
@@ -206,7 +225,7 @@ class MtgHangman {
 
     // generate the embed card
 
-    handleMessage(command, parameter, msg) {
+    handleMessage(command: any, parameter: any, msg: any) {
         const [first, ...rest] = parameter.toLowerCase().split(' ');
 
         // check for already running games
@@ -251,21 +270,23 @@ class MtgHangman {
         });
 
         // fetch data from API
-        rp({url: this.cardApi, json: true}).then(body => {
+        rp({url: this.cardApi, json: true}).then((body: any) => {
             if (body.name) {
                 game.card = body;
                 const embed = game.generateEmbed();
-                return msg.channel.send('', {embed}).then(sentMessage => {
+                return msg.channel.send('', {embed}).then((sentMessage: any) => {
                     game.message = sentMessage;
                     sentMessage.react('❓');
                     const collector = sentMessage.createReactionCollector(
-                        ({emoji}) => emoji.name.charCodeAt(0) === 55356 && emoji.name.charCodeAt(1) >= 56806 && emoji.name.charCodeAt(1) <= 56831,
+                        ({
+                            emoji
+                        }: any) => emoji.name.charCodeAt(0) === 55356 && emoji.name.charCodeAt(1) >= 56806 && emoji.name.charCodeAt(1) <= 56831,
                         {time: GAME_TIME}
-                    ).on('collect', (reaction) => {
+                    ).on('collect', (reaction: any) => {
                         // get emoji character (we only accept :regional_indicator_X: emojis)
                         const char = String.fromCharCode(reaction.emoji.name.charCodeAt(1) - 56709);
                         game.handleLetter(char);
-                    }).on('end', (collected, reason) => {
+                    }).on('end', (collected: any, reason: any) => {
                         // If we cancelled the collector, the game state has already been updated
                         // If the time ran out, however, we know that the game was lost
                         if (reason === 'time')
@@ -277,7 +298,7 @@ class MtgHangman {
                 }).catch(() => {
                 });
             }
-        }, err => {
+        }, (err: any) => {
             log.error('Error getting random card from API', err.error.details);
             msg.channel.send('', {
                 embed: new Discord.MessageEmbed({

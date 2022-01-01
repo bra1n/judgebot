@@ -1,8 +1,13 @@
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable '_'.
 const _ = require('lodash');
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'Discord'.
 const Discord = require('discord.js');
 
 class Help {
-    constructor(modules) {
+    commands: any;
+    location: any;
+    modules: any;
+    constructor(modules: any) {
         this.commands = {
             help: {
                 aliases: [],
@@ -22,7 +27,7 @@ class Help {
         return this.commands;
     }
 
-    handleMessage(command, parameter, msg) {
+    handleMessage(command: any, parameter: any, msg: any) {
         let param = parameter.trim().toLowerCase().split(" ")[0];
 
         const embed = new Discord.MessageEmbed({
@@ -32,26 +37,34 @@ class Help {
         });
 
         const commands = {};
-        this.modules.forEach(module => {
-            _.forEach(module.getCommands(), (commandObj, command) => {
+        this.modules.forEach((module: any) => {
+            _.forEach(module.getCommands(), (commandObj: any, command: any) => {
                 commandObj.name = command;
+                // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                 commands[command] = commandObj;
-                commandObj.aliases.forEach(alias => {
+                commandObj.aliases.forEach((alias: any) => {
+                    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                     commands[alias] = commandObj;
                 });
             })
         })
 
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         if (parameter && commands[parameter]) {
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             embed.setTitle('Command "!'+commands[parameter].name+'"');
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             embed.setDescription(commands[parameter].help);
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             embed.addField('Examples', '`' + commands[parameter].examples.join('`\n`') + '`', true)
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             if (commands[parameter].aliases && commands[parameter].aliases.length) {
+                // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                 embed.addField('Aliases', '`!' + commands[parameter].aliases.join('`\n`!') + '`', true);
             }
         } else {
             let description = '';
-            _.forEach(commands, (commandObj, command) => {
+            _.forEach(commands, (commandObj: any, command: any) => {
                 if (command !== commandObj.name) return;
                 description += ':small_blue_diamond: **!'+command+'**  '+commandObj.description+'\n';
             });

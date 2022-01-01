@@ -1,12 +1,24 @@
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'rp'.
 const rp = require("request-promise-native");
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable '_'.
 const _ = require("lodash");
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'Discord'.
 const Discord = require("discord.js");
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'utils'.
 const utils = require("../utils");
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'log'.
 const log = utils.getLogger('card');
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'cheerio'.
 const cheerio = require("cheerio");
 const { SlashCommandBuilder } = require('@discordjs/builders');
 
 class MtgCardLoader {
+    cardApi: any;
+    cardApiFuzzy: any;
+    colors: any;
+    commands: any;
+    manamojis: any;
+    permissionCache: any;
     constructor() {
         this.commands = {
             card: {
@@ -132,16 +144,16 @@ class MtgCardLoader {
      */
     getInteractions() {
         // This is a common parameter used by all interactions
-        const scryfallSearchTerm = option => option
+        const scryfallSearchTerm = (option: any) => option
             .setName("search_term")
             .setDescription("Scryfall search term")
             .setRequired(true);
 
         // Currently, we handle all interactions by just treating them like messages
-        const handleInteraction = interaction => {
+        const handleInteraction = (interaction: any) => {
             this.handleCommand(
                 "card",
-                interaction.options.data.filter(option => option.name === 'search_term').value,
+                interaction.options.data.filter((option: any) => option.name === 'search_term').value,
                 interaction.channel,
                 interaction.user
             )
@@ -197,15 +209,15 @@ class MtgCardLoader {
     }
 
     // replace mana and other symbols with actual emojis
-    renderEmojis(text) {
-        return text.replace(/{[^}]+?}/ig, match => {
+    renderEmojis(text: any) {
+        return text.replace(/{[^}]+?}/ig, (match: any) => {
             const code = match.replace(/[^a-z0-9]/ig,'').toLowerCase();
             return this.manamojis[code] ? '<:'+this.manamojis[code]+'>':'';
         });
     }
 
     // determine embed border color
-    getBorderColor(card) {
+    getBorderColor(card: any) {
         let color;
         if (!card.colors || card.colors.length === 0) {
             color = this.colors.NONE;
@@ -220,10 +232,10 @@ class MtgCardLoader {
     }
 
     // parse Gatherer rulings
-    parseGathererRulings(gatherer) {
+    parseGathererRulings(gatherer: any) {
         const $ = cheerio.load(gatherer);
-        const rulings = [];
-        $('.rulingsTable tr').each((index,elem) => {
+        const rulings: any = [];
+        $('.rulingsTable tr').each((index: any,elem: any) => {
             rulings.push('**'+$(elem).find('td:nth-child(1)').text()+':** '+$(elem).find('td:nth-child(2)').text());
             if (rulings.join('\n').length > 2040) {
                 rulings[rulings.length - 1] = '...';
@@ -234,9 +246,8 @@ class MtgCardLoader {
     }
 
     // generate description text from a card object
-    generateDescriptionText(card) {
-        const ptToString = (card) =>
-            '**'+card.power.replace(/\*/g, '\\*') + "/" + card.toughness.replace(/\*/g, '\\*')+'**';
+    generateDescriptionText(card: any) {
+        const ptToString = (card: any) => '**'+card.power.replace(/\*/g, '\\*') + "/" + card.toughness.replace(/\*/g, '\\*')+'**';
 
         const description = [];
         if (card.type_line) { // bold type line
@@ -247,7 +258,7 @@ class MtgCardLoader {
         }
         if (card.oracle_text) { // reminder text in italics
             const text = card.printed_text || card.oracle_text;
-            description.push(text.replace(/[()]/g, m => m === '(' ? '*(':')*'));
+            description.push(text.replace(/[()]/g, (m: any) => m === '(' ? '*(':')*'));
         }
         if (card.flavor_text) { // flavor text in italics
             description.push('*' + card.flavor_text+'*');
@@ -260,10 +271,10 @@ class MtgCardLoader {
         }
         if (card.card_faces) {
             // split cards are special
-            card.card_faces.forEach(face => {
+            card.card_faces.forEach((face: any) => {
                 description.push('**'+face.type_line+'**');
                 if (face.oracle_text) {
-                    description.push(face.oracle_text.replace(/[()]/g, m => m === '(' ? '*(':')*'));
+                    description.push(face.oracle_text.replace(/[()]/g, (m: any) => m === '(' ? '*(':')*'));
                 }
                 if (face.power) {
                     description.push(ptToString(face));
@@ -275,7 +286,7 @@ class MtgCardLoader {
     }
 
     // generate the embed card
-    generateEmbed(cards, command, hasEmojiPermission) {
+    generateEmbed(cards: any, command: any, hasEmojiPermission: any) {
         return new Promise(resolve => {
             const card = cards[0];
 
@@ -311,7 +322,7 @@ class MtgCardLoader {
             let footer = "Use !help to get a list of available commands.";
             if(cards.length > 1) {
                 footer = (cards.length - 1) + ' other hits:\n';
-                footer += cards.slice(1,6).map(cardObj => (cardObj.printed_name || cardObj.name)).join('; ');
+                footer += cards.slice(1,6).map((cardObj: any) => cardObj.printed_name || cardObj.name).join('; ');
                 if (cards.length > 6) footer += '; ...';
             }
 
@@ -351,7 +362,7 @@ class MtgCardLoader {
 
             // add rulings loaded from Gatherer, if needed
             if(command.match(/^ruling/) && card.related_uris.gatherer) {
-                rp(card.related_uris.gatherer).then(gatherer => {
+                rp(card.related_uris.gatherer).then((gatherer: any) => {
                     embed.setAuthor('Gatherer rulings for');
                     embed.setDescription(this.parseGathererRulings(gatherer));
                     resolve(embed);
@@ -367,19 +378,19 @@ class MtgCardLoader {
      * @param cardName
      * @returns {Promise<Object>}
      */
-    getCards(cardName) {
+    getCards(cardName: any) {
         let requestPromise;
         requestPromise = new Promise((resolve, reject) => {
-            rp({url: this.cardApi + encodeURIComponent(cardName + ' include:extras'), json: true}).then(body => {
+            rp({url: this.cardApi + encodeURIComponent(cardName + ' include:extras'), json: true}).then((body: any) => {
                 if(body.data && body.data.length) {
                     // sort the cards to better match the search query (issue #87)
-                    body.data.sort((a, b) => this.scoreHit(b, cardName) - this.scoreHit(a, cardName));
+                    body.data.sort((a: any, b: any) => this.scoreHit(b, cardName) - this.scoreHit(a, cardName));
                 }
                 resolve(body);
             }, () => {
                 log.info('Falling back to fuzzy search for '+cardName);
                 rp({url: this.cardApiFuzzy + encodeURIComponent(cardName), json: true})
-                    .then(response => resolve({data: [response]}), reject);
+                    .then((response: any) => resolve({data: [response]}), reject);
             });
         });
         return requestPromise;
@@ -390,9 +401,9 @@ class MtgCardLoader {
      * @param card
      * @param query
      */
-    scoreHit(card, query) {
+    scoreHit(card: any, query: any) {
         const name = (card.printed_name || card.name).toLowerCase().replace(/[^a-z0-9]/g, '');
-        const nameQuery = query.split(" ").filter(q => !q.match(/[=:()><]/)).join(" ").toLowerCase().replace(/[^a-z0-9]/g, '');
+        const nameQuery = query.split(" ").filter((q: any) => !q.match(/[=:()><]/)).join(" ").toLowerCase().replace(/[^a-z0-9]/g, '');
         let score = 0;
         if (name === nameQuery) {
             // exact match - to the top!
@@ -414,7 +425,7 @@ class MtgCardLoader {
      * @param channel Channel object in which to interact
      * @param author User object to respond to
      */
-    handleCommand(command, parameter, channel, author){
+    handleCommand(command: any, parameter: any, channel: any, author: any){
         const cardName = parameter.toLowerCase();
         // no card name, no lookup
         if (!cardName) return;
@@ -422,8 +433,10 @@ class MtgCardLoader {
         // fetch data from API
         this.getCards(cardName).then(body => {
             // check if there are results
+            // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
             if (body.data && body.data.length) {
                 // generate embed
+                // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                 this.generateEmbed(body.data, command, permission).then(embed => {
                     return channel.send('', {embed});
                 }, err => log.error(err)).then(async sentMessage => {
@@ -431,28 +444,35 @@ class MtgCardLoader {
                     if (!command.match(/^art/)){
                         await sentMessage.react('🔍');
                     }
+                    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                     if (body.data.length > 1) {
                         await sentMessage.react('⬅');
                         await sentMessage.react('➡');
                     }
 
-                    const handleReaction = reaction => {
+                    const handleReaction = (reaction: any) => {
                         if (reaction.emoji.toString() === '⬅') {
+                            // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                             body.data.unshift(body.data.pop());
                         } else if (reaction.emoji.toString() === '➡') {
+                            // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                             body.data.push(body.data.shift());
                         } else {
                             // toggle zoom
+                            // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                             body.data[0].zoom = !body.data[0].zoom;
                         }
                         // edit the message to update the current card
+                        // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                         this.generateEmbed(body.data, command, permission).then(embed => {
                             sentMessage.edit('', {embed});
                         }).catch(() => {});
                     }
 
                     sentMessage.createReactionCollector(
-                        ({emoji} , user) => ['⬅','➡','🔍'].indexOf(emoji.toString()) > -1 && user.id === author.id,
+                        ({
+                            emoji
+                        }: any , user: any) => ['⬅','➡','🔍'].indexOf(emoji.toString()) > -1 && user.id === author.id,
                         {time: 60000, max: 20}
                     ).on('collect', handleReaction).on('remove', handleReaction);
                 }, err => log.error(err)).catch(() => {});
@@ -477,7 +497,7 @@ class MtgCardLoader {
      * @param msg
      * @returns {Promise}
      */
-    handleMessage(command, parameter, msg) {
+    handleMessage(command: any, parameter: any, msg: any) {
         return this.handleCommand(command, parameter, msg.channel, msg.author)
     }
 }

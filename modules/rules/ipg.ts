@@ -1,13 +1,25 @@
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'rp'.
 const rp = require("request-promise-native");
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'cheerio'.
 const cheerio = require("cheerio");
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable '_'.
 const _ = require("lodash");
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'utils'.
 const utils = require("../../utils");
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'log'.
 const log = utils.getLogger('ipg');
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'Discord'.
 const Discord = require("discord.js");
 
 const IPG_ADDRESS = process.env.IPG_ADDRESS || "https://raw.githubusercontent.com/hgarus/mtgdocs/master/docs/ipg.json";
 
 class IPG {
+    aliases: any;
+    commands: any;
+    ipgData: any;
+    location: any;
+    maxLength: any;
+    thumbnail: any;
     constructor(initialize = true) {
         this.location = "http://blogs.magicjudges.org/rules/ipg";
         this.maxLength = 2040;
@@ -73,14 +85,14 @@ class IPG {
             'cheating': '4.8'
         };
         if (initialize) {
-            rp({url: IPG_ADDRESS, simple: false, resolveWithFullResponse: true, json: true }).then(response => {
+            rp({url: IPG_ADDRESS, simple: false, resolveWithFullResponse: true, json: true }).then((response: any) => {
                 if (response.statusCode === 200) {
                     this.ipgData = response.body;
                     log.info("IPG Ready");
                 } else {
                     log.error("Error loading IPG, server returned status code " + response.statusCode);
                 }
-            }).catch(e => log.error("Error loading IPG: " + e, e));
+            }).catch((e: any) => log.error("Error loading IPG: " + e, e));
         }
     }
 
@@ -88,12 +100,12 @@ class IPG {
         return this.commands;
     }
 
-    formatPreview(entry) {
+    formatPreview(entry: any) {
         return `**${entry.title}**\n${entry.text}`;
     }
 
     // IPG Chapter (like "2")
-    formatChapterEntry(entry) {
+    formatChapterEntry(entry: any) {
         const text = entry.text || this.formatPreview(this.ipgData[entry.sections[0]]);
 
         return new Discord.MessageEmbed({
@@ -101,11 +113,11 @@ class IPG {
             description: _.truncate(text, {length: this.maxLength, separator: '\n'}),
             thumbnail: {url: this.thumbnail},
             url: entry.url
-        }).addField('Available Sections', entry.sections.map(s => `• ${this.ipgData[s].title}`));
+        }).addField('Available Sections', entry.sections.map((s: any) => `• ${this.ipgData[s].title}`));
     }
 
     // IPG Section (like "2.1")
-    formatSectionEntry(entry) {
+    formatSectionEntry(entry: any) {
         const text = entry.text || this.formatPreview(entry.subsectionContents[entry.subsections[0]]);
         const embed = new Discord.MessageEmbed({
             title: `IPG - ${entry.title}`,
@@ -117,15 +129,15 @@ class IPG {
             embed.addField('Penalty', entry.penalty);
         }
         if (entry.subsections.length) {
-            embed.addField('Available Subsections', entry.subsections.map(s => `• ${s}`));
+            embed.addField('Available Subsections', entry.subsections.map((s: any) => `• ${s}`));
         }
 
         return embed;
     }
 
     // IPG Subsection (like "2.1 definition")
-    formatSubsectionEntry(sectionEntry, subsectionEntry) {
-        const otherSections = sectionEntry.subsections.filter(s => s !== _.kebabCase(subsectionEntry.title));
+    formatSubsectionEntry(sectionEntry: any, subsectionEntry: any) {
+        const otherSections = sectionEntry.subsections.filter((s: any) => s !== _.kebabCase(subsectionEntry.title));
 
         return new Discord.MessageEmbed({
             title: `IPG - ${sectionEntry.title} - ${subsectionEntry.title}`,
@@ -137,7 +149,7 @@ class IPG {
     }
 
     // main lookup method
-    find(parameters) {
+    find(parameters: any) {
         const entry = this.ipgData[parameters[0]];
         if (!entry) {
             let availableEntries = _.keys(this.ipgData);
@@ -165,11 +177,13 @@ class IPG {
     getChapters() {
         return Object
             .values(this.ipgData)
+            // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
             .filter(c => c.title.match(/^\d+\s/))
+            // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
             .map(c => '• '+c.title.replace(/^(\d+)\s/,'$1. '));
     }
 
-    handleParameters(parameter) {
+    handleParameters(parameter: any) {
         let parameters = parameter.trim().toLowerCase().split(/\s+/);
         if (this.aliases[parameters[0]]) {
             parameters[0] = this.aliases[parameters[0]];
@@ -177,7 +191,7 @@ class IPG {
         return parameters;
     }
 
-    handleMessage(command, parameter, msg) {
+    handleMessage(command: any, parameter: any, msg: any) {
         if (parameter) {
             const embed = this.find(this.handleParameters(parameter));
             return msg.channel.send('', {embed});

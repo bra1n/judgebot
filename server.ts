@@ -1,4 +1,5 @@
 import { Client } from "discordx";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'loda... Remove this comment to see the full error message
 import * as  _ from "lodash";
 const utils = require("./utils");
 
@@ -49,27 +50,33 @@ const commands = {};
 // This maps slash command names to handler functions
 const interactionLookup = {};
 
-utils.modules.forEach((module, index) => {
+utils.modules.forEach((module: any, index: any) => {
     // eslint-disable-line global-require
     const moduleObject = new (require("./modules/" + module + '.js'))(utils.modules);
     if(moduleObject) {
         log.info("Successfully initialized module", module);
         utils.modules[index] = moduleObject;
-        _.forEach(moduleObject.getCommands(), (commandObj, command) => {
+        _.forEach(moduleObject.getCommands(), (commandObj: any, command: any) => {
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             handlers[command] = moduleObject;
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             commands[command] = commandObj;
             // map aliases to handlers as well
             if (commandObj.aliases) {
-                commandObj.aliases.forEach(alias => {
+                commandObj.aliases.forEach((alias: any) => {
+                    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                     handlers[alias] = moduleObject;
+                    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                     commands[alias] = commandObj;
                 });
             }
         });
 
         if (moduleObject.hasOwnProperty("getInteractions")){
-            _.forEach(moduleObject, (value, key) => {
+            _.forEach(moduleObject, (value: any, key: any) => {
+                // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                 interactionLookup[key] = value.response
+                // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'interactionDetails'.
                 interactionDetails.push(value.parser.toJSON())
             });
         }
@@ -86,16 +93,19 @@ const userMessageTimes = {};
 const charPattern = _.escapeRegExp(commandChar);
 // split inline and non-inline commands into 2 patterns
 const commandPattern = '(^|\\s)' + charPattern + '(' +
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     Object.keys(commands).filter(cmd => commands[cmd].inline).map(_.escapeRegExp).join('|')
     + ')|^' + charPattern + '(' +
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     Object.keys(commands).filter(cmd => !commands[cmd].inline).map(_.escapeRegExp).join('|')
     + ')';
 const regExpPattern = `(${commandPattern})( .*?)?(${charPattern}[^a-z0-9]|$)`;
 const regExpObject = new RegExp(regExpPattern, 'ig');
 
 /* Handle incoming messages */
-bot.on("message", msg => {
+bot.on("message", (msg: any) => {
     const queries = msg.content.match(regExpObject);
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     const lastMessage = userMessageTimes[msg.author.id] || 0;
 
     // if the message mentions us, log it
@@ -112,14 +122,16 @@ bot.on("message", msg => {
         new Date().getTime() - lastMessage >= spamTimeout) // ...is outside the spam threshold
     {
         // store the time to prevent spamming from this user
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         userMessageTimes[msg.author.id] = new Date().getTime();
 
         // only use the first 3 commands in a message, ignore the rest
-        queries.slice(0, 3).forEach(query => {
+        queries.slice(0, 3).forEach((query: any) => {
             const command = query.trim().split(" ")[0].substr(commandChar.length).toLowerCase();
             const parameter = query.trim().split(" ").slice(1).join(" ").replace(new RegExp(charPattern + '[^a-z0-9]?$', 'i'), '');
 
             log.info(utils.prettyLog(msg, 'query', (command+' '+parameter).trim()));
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             const ret = handlers[command].handleMessage(command, parameter, msg);
             // if ret is undefined or not a thenable this just returns a resolved promise and the callback won't be called
             Promise.resolve(ret).catch(e => log.error('An error occured while handling', msg.content, ":", e.message));
@@ -127,12 +139,13 @@ bot.on("message", msg => {
     }
 });
 
-bot.on('interactionCreate', interaction => {
+bot.on('interactionCreate', (interaction: any) => {
     if (!interaction.isCommand()) return;
 
     if (interaction.commandName in interactionLookup){
         // Pass the interaction to each handler function
         // See full API here: https://discord.js.org/#/docs/main/stable/class/CommandInteraction
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         interactionLookup[interaction.commandName](interaction)
     }
 });
@@ -143,17 +156,17 @@ bot.on('ready', () => {
     utils.updateServerCount(bot);
 });
 
-bot.on('guildCreate', (guild) => {
+bot.on('guildCreate', (guild: any) => {
     log.info(utils.prettyLog({guild}, "joined"));
     utils.updateServerCount(bot);
 });
 
-bot.on('guildDelete', (guild) => {
+bot.on('guildDelete', (guild: any) => {
     log.info(utils.prettyLog({guild}, "left"));
     utils.updateServerCount(bot);
 });
 
-bot.on('error', (error) => {
+bot.on('error', (error: any) => {
     log.error('client error received');
     log.error(error);
     console.log(error);

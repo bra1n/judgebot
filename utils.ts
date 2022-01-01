@@ -1,6 +1,8 @@
 const log4js = require("log4js");
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'request'.
 const request = require("request");
 const chalk = require("chalk");
+// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable '_'.
 const _ = require("lodash");
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
@@ -28,11 +30,11 @@ const checkInteractions = async () => {
  */
 const updateInteractions = async () => {
     const log = getLogger('bot');
-    const interactions = [];
+    const interactions: any = [];
     modules.forEach((module, index) => {
         const moduleObject = new (require("./modules/" + module + '.js'))(modules);
             if ("getInteractions" in moduleObject){
-                _.forEach(moduleObject.getInteractions(), (value, key) => {
+                _.forEach(moduleObject.getInteractions(), (value: any, key: any) => {
                     interactions.push(value.parser.toJSON())
                 });
             }
@@ -58,6 +60,7 @@ const updateInteractions = async () => {
 }
 
 // setup logger
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'name' implicitly has an 'any' type.
 const getLogger = (name) => {
     let logPattern = '%[[%p]%] '+chalk.red('[%c]') +' - %m';
     if (!process.env.PAPERTRAIL_API_TOKEN) {
@@ -72,9 +75,12 @@ const getLogger = (name) => {
 }
 
 // create a pretty log message for a user / guild
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'guild' implicitly has an 'any' ty... Remove this comment to see the full error message
 const prettyLog = ({guild, channel = {}, author = {}}, action, log = '') => {
     const logMessage = [
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'name' does not exist on type '{}'.
         chalk.blue('[' + (guild ? guild.name : 'direct message') + '#' + (channel.name || '') +']'),
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'username' does not exist on type '{}'.
         chalk.yellow('[' + (author.username ? author.username + '#' + author.discriminator : 'server') + ']'),
         chalk.magenta('[' + action + ']'),
         log
@@ -83,6 +89,7 @@ const prettyLog = ({guild, channel = {}, author = {}}, action, log = '') => {
 }
 
 // send updated stats to bots.discord.com
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bot' implicitly has an 'any' type.
 const updateServerCount = (bot) => {
     bot.user.setPresence({
         activity: {

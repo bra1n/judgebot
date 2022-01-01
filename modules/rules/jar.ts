@@ -1,4 +1,6 @@
 class JAR {
+    Location: any;
+    commands: any;
     constructor() {
         this.Location = "https://blogs.magicjudges.org/rules/jar/";
         this.commands = {
@@ -17,7 +19,7 @@ class JAR {
         return this.commands;
     }
 
-    handleMessage(command, parameter, msg) {
+    handleMessage(command: any, parameter: any, msg: any) {
         return msg.channel.send('**Judging at Regular**: <' + this.Location + '>');
     }
 }

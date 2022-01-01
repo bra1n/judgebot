@@ -1,62 +1,102 @@
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'rp'.
-const rp = require("request-promise-native");
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable '_'.
-const _ = require("lodash");
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'Discord'.
-const Discord = require("discord.js");
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'utils'.
-const utils = require("../utils");
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'log'.
+import {CommandInteraction, Message} from "discord.js";
+import {Discord, Slash, SlashOption, SlashOptionParams} from "discordx";
+import {MessageEmbed} from "discord.js"
+import * as cheerio from "cheerio";
+import fetch from 'node-fetch';
+import _ from "lodash";
+import * as utils from "../utils.js";
 const log = utils.getLogger('card');
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'cheerio'.
-const cheerio = require("cheerio");
-const { SlashCommandBuilder } = require('@discordjs/builders');
 
-class MtgCardLoader {
+const scryfallSearchOption: SlashOptionParams = {
+    type: "STRING",
+    description: "Scryfall search term",
+};
+
+@Discord()
+export default class MtgCardLoader {
     cardApi: any;
     cardApiFuzzy: any;
     colors: any;
     commands: any;
     manamojis: any;
     permissionCache: any;
+
+    @Slash("card", {
+        description: `Search for an English Magic card by (partial) name, supports full Scryfall syntax`,
+    })
+    async card(
+        @SlashOption("search", scryfallSearchOption)
+        search: string,
+        interaction: CommandInteraction
+    ){
+        await this.handleInteraction(
+            "card",
+            search,
+            interaction
+        )
+    }
+
+    @Slash("price", {
+        description: "Show the price in USD, EUR and TIX for a card"
+    })
+    async price(
+        @SlashOption("search", scryfallSearchOption)
+            search: string,
+        interaction: CommandInteraction
+    ){
+        await this.handleInteraction(
+            "price",
+            search,
+            interaction
+        )
+    }
+
+    @Slash("ruling", {
+        description: "Show the Gatherer rulings for a card"
+    })
+    async ruling(
+        @SlashOption("search", scryfallSearchOption)
+            search: string,
+        interaction: CommandInteraction
+    ){
+        await this.handleInteraction(
+            "ruling",
+            search,
+            interaction
+        )
+    }
+
+    @Slash("legal", {
+        description: "Show the format legality for a card",
+    })
+    async legal(
+        @SlashOption("search", scryfallSearchOption)
+            search: string,
+        interaction: CommandInteraction
+    ){
+        await this.handleInteraction(
+            "legal",
+            search,
+            interaction
+        )
+    }
+
+    @Slash("art", {
+        description: "Show just the art for a card"
+    })
+    async art(
+        @SlashOption("search", scryfallSearchOption)
+            search: string,
+        interaction: CommandInteraction
+    ){
+        await this.handleInteraction(
+            "art",
+            search,
+            interaction
+        )
+    }
+
     constructor() {
-        this.commands = {
-            card: {
-                aliases: [],
-                inline: true,
-                description: "Search for an English Magic card by (partial) name, supports full Scryfall syntax",
-                help: '',
-                examples: ["!card iona", "!card t:creature o:flying", "!card goyf e:fut"]
-            },
-            price: {
-                aliases: ["prices"],
-                inline: true,
-                description: "Show the price in USD, EUR and TIX for a card",
-                help: '',
-                examples: ["!price tarmogoyf"]
-            },
-            ruling: {
-                aliases: ["rulings"],
-                inline: true,
-                description: "Show the Gatherer rulings for a card",
-                help: '',
-                examples: ["!ruling sylvan library"]
-            },
-            legal: {
-                aliases: ["legality"],
-                inline: true,
-                description: "Show the format legality for a card",
-                help: '',
-                examples: ["!legal divining top"]
-            },
-            art: {
-                aliases: [],
-                inline: true,
-                description: "Show just the art for a card",
-                help: '',
-                examples: ["!art lovisa coldeyes"]
-            }
-        };
         this.cardApi = "https://api.scryfall.com/cards/search?q=";
         this.cardApiFuzzy = "https://api.scryfall.com/cards/named?fuzzy=";
         // Discord bots can use custom emojis globally, so we just reference these Manamoji through their code / ID
@@ -139,75 +179,6 @@ class MtgCardLoader {
         this.permissionCache = {};
     }
 
-    /**
-     * Compile data about each interaction supported by this class
-     */
-    getInteractions() {
-        // This is a common parameter used by all interactions
-        const scryfallSearchTerm = (option: any) => option
-            .setName("search_term")
-            .setDescription("Scryfall search term")
-            .setRequired(true);
-
-        // Currently, we handle all interactions by just treating them like messages
-        const handleInteraction = (interaction: any) => {
-            this.handleCommand(
-                "card",
-                interaction.options.data.filter((option: any) => option.name === 'search_term').value,
-                interaction.channel,
-                interaction.user
-            )
-        };
-
-        // Returns a dictionary of dictionaries.
-        // The outer dictionary is indexed by the command name.
-        // The inner dictionary has parser, which returns the SlashCommandBuilder, and response, which is a function
-        // for handling that interaction
-        return {
-            card: {
-                parser: new SlashCommandBuilder()
-                    .setName("card")
-                    .setDescription("Search for an English Magic card by (partial) name, supports full Scryfall syntax")
-                    .addStringOption(scryfallSearchTerm),
-                response: handleInteraction
-            },
-            price: {
-                parser: new SlashCommandBuilder()
-                    .setName("price")
-                    .setDescription("Show the price in USD, EUR and TIX for a card")
-                    .addStringOption(scryfallSearchTerm),
-                response: handleInteraction
-            },
-            rulings: {
-             parser: new SlashCommandBuilder()
-                     .setName("rulings")
-                     .setDescription("Show the Gatherer rulings for a card")
-                     .addStringOption(scryfallSearchTerm),
-                response: handleInteraction
-            },
-            legality: {
-                parser:
-                    new SlashCommandBuilder()
-                        .setName("legality")
-                        .setDescription("Show the format legality for a card")
-                        .addStringOption(scryfallSearchTerm),
-                response: handleInteraction
-            },
-            art: {
-                parser:
-                    new SlashCommandBuilder()
-                        .setName("art")
-                        .setDescription("Show just the art for a card")
-                        .addStringOption(scryfallSearchTerm),
-                response: handleInteraction
-            }
-        }
-    }
-
-    getCommands() {
-        return this.commands;
-    }
-
     // replace mana and other symbols with actual emojis
     renderEmojis(text: any) {
         return text.replace(/{[^}]+?}/ig, (match: any) => {
@@ -286,7 +257,7 @@ class MtgCardLoader {
     }
 
     // generate the embed card
-    generateEmbed(cards: any, command: any, hasEmojiPermission: any) {
+    generateEmbed(cards: any, command: any, hasEmojiPermission: any): Promise<MessageEmbed> {
         return new Promise(resolve => {
             const card = cards[0];
 
@@ -327,21 +298,20 @@ class MtgCardLoader {
             }
 
             // instantiate embed object
-            const embed = new Discord.MessageEmbed({
+            const embed = new MessageEmbed({
                 title,
                 description,
                 footer: {text: footer},
                 url: card.scryfall_uri,
                 color: this.getBorderColor(card.layout === 'transform' || card.layout === 'modal_dfc' ? card.card_faces[0]:card),
-                thumbnail: card.image_uris ? {url: card.image_uris.small} : null,
-                image: card.zoom && card.image_uris ? {url: card.image_uris.normal} : null
+                thumbnail: card.image_uris ? {url: card.image_uris.small} : undefined,
+                image: card.zoom && card.image_uris ? {url: card.image_uris.normal} : undefined
             });
 
             // show crop art only
             if (command.match(/^art/) && card.image_uris) {
                 embed.setImage(card.image_uris.art_crop);
                 embed.setDescription('🖌️ ' + card.artist);
-                embed.setThumbnail(null);
             }
 
             // add pricing, if requested
@@ -362,7 +332,7 @@ class MtgCardLoader {
 
             // add rulings loaded from Gatherer, if needed
             if(command.match(/^ruling/) && card.related_uris.gatherer) {
-                rp(card.related_uris.gatherer).then((gatherer: any) => {
+                fetch(card.related_uris.gatherer).then((gatherer: any) => {
                     embed.setAuthor('Gatherer rulings for');
                     embed.setDescription(this.parseGathererRulings(gatherer));
                     resolve(embed);
@@ -375,25 +345,18 @@ class MtgCardLoader {
 
     /**
      * Fetch the cards from Scryfall
-     * @param cardName
-     * @returns {Promise<Object>}
      */
-    getCards(cardName: any) {
-        let requestPromise;
-        requestPromise = new Promise((resolve, reject) => {
-            rp({url: this.cardApi + encodeURIComponent(cardName + ' include:extras'), json: true}).then((body: any) => {
-                if(body.data && body.data.length) {
-                    // sort the cards to better match the search query (issue #87)
-                    body.data.sort((a: any, b: any) => this.scoreHit(b, cardName) - this.scoreHit(a, cardName));
-                }
-                resolve(body);
-            }, () => {
-                log.info('Falling back to fuzzy search for '+cardName);
-                rp({url: this.cardApiFuzzy + encodeURIComponent(cardName), json: true})
-                    .then((response: any) => resolve({data: [response]}), reject);
-            });
-        });
-        return requestPromise;
+    async getCards(cardName: any) {
+        let res = await fetch(this.cardApi + encodeURIComponent(cardName + ' include:extras'));
+        let body: any = await res.json();
+        if (body.data && body.data.length) {
+            // sort the cards to better match the search query (issue #87)
+            return body.data.sort((a: any, b: any) => this.scoreHit(b, cardName) - this.scoreHit(a, cardName));
+        } else {
+            log.info('Falling back to fuzzy search for ' + cardName);
+            let res = await fetch(this.cardApiFuzzy + encodeURIComponent(cardName));
+            return await res.json();
+        }
     }
 
     /**
@@ -422,84 +385,62 @@ class MtgCardLoader {
      * Handles a generic command ie either a message or an interaction
      * @param command "card", "art" etc
      * @param parameter Scryfall search term
-     * @param channel Channel object in which to interact
-     * @param author User object to respond to
+     * @param interaction The interaction to respond to
      */
-    handleCommand(command: any, parameter: any, channel: any, author: any){
+    async handleInteraction(command: string, parameter: string, interaction: CommandInteraction){
         const cardName = parameter.toLowerCase();
         // no card name, no lookup
         if (!cardName) return;
         const permission = true; // assume we have custom emoji permission for now
         // fetch data from API
-        this.getCards(cardName).then(body => {
-            // check if there are results
-            // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-            if (body.data && body.data.length) {
-                // generate embed
-                // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                this.generateEmbed(body.data, command, permission).then(embed => {
-                    return channel.send('', {embed});
-                }, err => log.error(err)).then(async sentMessage => {
-                    // add reactions for zoom and paging
-                    if (!command.match(/^art/)){
-                        await sentMessage.react('🔍');
-                    }
-                    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                    if (body.data.length > 1) {
-                        await sentMessage.react('⬅');
-                        await sentMessage.react('➡');
-                    }
+        const cards = await this.getCards(cardName);
+        // check if there are results
+        if (cards.length > 0) {
+            // generate embed
+            const embed = await this.generateEmbed(cards, command, permission);
+            const sentMessage = <Message> await interaction.reply({embeds: [embed], fetchReply: true});
 
-                    const handleReaction = (reaction: any) => {
-                        if (reaction.emoji.toString() === '⬅') {
-                            // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                            body.data.unshift(body.data.pop());
-                        } else if (reaction.emoji.toString() === '➡') {
-                            // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                            body.data.push(body.data.shift());
-                        } else {
-                            // toggle zoom
-                            // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                            body.data[0].zoom = !body.data[0].zoom;
-                        }
-                        // edit the message to update the current card
-                        // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                        this.generateEmbed(body.data, command, permission).then(embed => {
-                            sentMessage.edit('', {embed});
-                        }).catch(() => {});
+                await sentMessage.react('⬅');
+                await sentMessage.react('➡');
+                // add reactions for zoom and paging
+                if (!command.match(/^art/)) {
+                    await sentMessage.react('🔍');
+                }
+                const handleReaction = (reaction: any) => {
+                    if (reaction.emoji.toString() === '⬅') {
+                        cards.unshift(cards.pop());
+                    } else if (reaction.emoji.toString() === '➡') {
+                        cards.push(cards.shift());
+                    } else {
+                        // toggle zoom
+                        cards[0].zoom = !cards[0].zoom;
                     }
+                    // edit the message to update the current card
+                    this.generateEmbed(cards, command, permission).then(embed => {
+                        sentMessage.edit({embeds: [embed]});
+                    }).catch(() => {
+                    });
+                }
 
-                    sentMessage.createReactionCollector(
-                        ({
-                            emoji
-                        }: any , user: any) => ['⬅','➡','🔍'].indexOf(emoji.toString()) > -1 && user.id === author.id,
-                        {time: 60000, max: 20}
-                    ).on('collect', handleReaction).on('remove', handleReaction);
-                }, err => log.error(err)).catch(() => {});
-            }
-        }).catch(err => {
-            let description = 'No cards matched `'+cardName+'`.';
-            if (err.statusCode === 503) {
-                description = 'Scryfall is currently offline, please try again later.'
-            }
-            return channel.send('', {embed: new Discord.MessageEmbed({
-                    title: 'Error',
-                    description,
-                    color: 0xff0000
-                })});
-        });
-    }
-
-    /**
-     * Handle an incoming message
-     * @param command
-     * @param parameter
-     * @param msg
-     * @returns {Promise}
-     */
-    handleMessage(command: any, parameter: any, msg: any) {
-        return this.handleCommand(command, parameter, msg.channel, msg.author)
+                sentMessage.createReactionCollector({
+                    filter: ({ emoji } ,user) => ['⬅', '➡', '🔍'].indexOf(emoji.toString()) > -1 && user.id === interaction.user.id,
+                    time: 60000,
+                        max: 20
+                }
+                ).on('collect', handleReaction).on('remove', handleReaction);
+            } else {
+                let description = 'No cards matched `' + cardName + '`.';
+                // if (err.statusCode === 503) {
+                //     description = 'Scryfall is currently offline, please try again later.'
+                // }
+                return interaction.reply({
+                    embeds: [new MessageEmbed({
+                        title: 'Error',
+                        description,
+                        color: 0xff0000
+                    })]
+                });
+        }
     }
 }
 
-module.exports = MtgCardLoader;

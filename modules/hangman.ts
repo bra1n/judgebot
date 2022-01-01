@@ -1,15 +1,12 @@
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'rp'.
-const rp = require('request-promise-native');
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable '_'.
-const _ = require('lodash');
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'Discord'.
-const Discord = require('discord.js');
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'utils'.
-const utils = require('../utils');
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'log'.
+import _ from "lodash";
+import * as utils from "../utils.js";
+import MtgCardLoader from "./card.js";
+import {CommandInteraction, Message, MessageEmbed} from "discord.js";
+import {Discord, Slash, SlashChoice, SlashOption, SlashOptionParams} from "discordx";
+import fetch from 'node-fetch';
+
 const log = utils.getLogger('hangman');
-const Card = require('./card');
-const cardFetcher = new Card();
+const cardFetcher = new MtgCardLoader();
 
 const GAME_TIME = 3 * 60 * 1000; // minutes
 
@@ -24,14 +21,15 @@ class HangmanGame {
     letters: any;
     message: any;
     wrongGuesses: any;
+
     constructor({
-        id,
-        gameList,
-        message = null,
-        collector = null,
-        card = null,
-        difficulty = 'medium'
-    }: any = {}) {
+                    id,
+                    gameList,
+                    message = null,
+                    collector = null,
+                    card = null,
+                    difficulty = 'medium'
+                }: any = {}) {
         this.id = id;
         this.gameList = gameList;
         this.message = message;
@@ -53,26 +51,22 @@ class HangmanGame {
         // Letters is a set, which handles duplicates for us
         this.letters.add(char);
         this.checkDone();
-        // @ts-expect-error ts-migrate(2554) FIXME: Expected 0 arguments, but got 1.
-        this.updateEmbed(false);
+        this.updateEmbed();
     }
 
     /**
      * Handle a user guessing the entire card name
-     * @param {String} guess
-     * @param {Discord.Message} msg
      */
-    handleGuess(guess: any, msg: any) {
+    handleGuess(guess: any, msg: CommandInteraction) {
         const correct = this.card.name.toLowerCase();
         if (guess.includes(correct)) {
             // If they're correct, pretend we guessed all the letters individually
             this.setDone(true);
             this.updateEmbed();
-        }
-        else {
+        } else {
             this.wrongGuesses++;
             this.checkDone();
-            msg.react('❎');
+            msg.reply('❎');
             this.updateEmbed();
         }
     }
@@ -106,7 +100,7 @@ class HangmanGame {
      * Using the stored parameters, updates the embed for the specified game
      */
     updateEmbed() {
-        this.message.edit('', {embed: this.generateEmbed()});
+        this.message.edit({embeds: [this.generateEmbed()]});
     }
 
     /**
@@ -166,7 +160,7 @@ class HangmanGame {
             'reactions to pick letters.';
 
         // instantiate embed object
-        const embed = new Discord.MessageEmbed({
+        const embed = new MessageEmbed({
             author: {name: 'Guess the card:'},
             title,
             description,
@@ -176,12 +170,11 @@ class HangmanGame {
         // game is over
         if (this.done) {
             embed.setTitle(this.card.name);
-            embed.setFooter(this.gameSuccess ? 'You guessed the card!' :'You failed to guess the card!');
+            embed.setFooter(this.gameSuccess ? 'You guessed the card!' : 'You failed to guess the card!');
             embed.setURL(this.card.scryfall_uri);
             if ((this.card.layout === 'transform' || this.card.layout === 'modal_dfc') && this.card.card_faces && this.card.card_faces[0].image_uris) {
                 embed.setImage(this.card.card_faces[0].image_uris.normal);
-            }
-            else if (this.card.image_uris) {
+            } else if (this.card.image_uris) {
                 embed.setImage(this.card.image_uris.normal);
             }
             embed.setColor(this.gameSuccess ? 0x00ff00 : 0xff0000);
@@ -191,10 +184,12 @@ class HangmanGame {
     }
 }
 
-class MtgHangman {
+@Discord()
+export default class MtgHangman {
     cardApi: any;
     commands: any;
     runningGames: any;
+
     constructor() {
         this.commands = {
             hangman: {
@@ -219,98 +214,101 @@ class MtgHangman {
         this.runningGames = {};
     }
 
-    getCommands() {
-        return this.commands;
-    }
+    @Slash("guess", {
+        description: 'Outright guess the hangman magic card.'
+    })
+    guess(
+        @SlashOption("card", {
+            description: "Name of the card you believe is the answer to the hangman puzzle"
+        })
+            guess: string,
+        interaction: CommandInteraction
+    ) {
+        const id = interaction.guildId || interaction.user.id;
 
-    // generate the embed card
-
-    handleMessage(command: any, parameter: any, msg: any) {
-        const [first, ...rest] = parameter.toLowerCase().split(' ');
-
-        // check for already running games
-        const id = msg.guild ? msg.guild.id : msg.author.id;
         if (id in this.runningGames) {
             const game = this.runningGames[id];
             // The user can !hangman guess Some Card Name
-            if (first === 'guess') {
-                const guess = rest.join(' ').toLowerCase();
-                game.handleGuess(guess, msg);
-            }
-            else {
-                msg.channel.send('', {
-                    embed: new Discord.MessageEmbed({
-                        title: 'Error',
-                        description: 'You can only start one hangman game every ' + GAME_TIME / 60000 + ' minutes.',
-                        color: 0xff0000
-                    })
-                });
-            }
-            return;
-        }
-        else {
+            game.handleGuess(guess, interaction);
+        } else {
             // Handle the case where we "!hangman guess" but no game has started
-            if (first === 'guess') {
-                msg.channel.send('', {
-                    embed: new Discord.MessageEmbed({
-                        title: 'Error',
-                        description: 'No hangman game is currently running in this server. Guess ignored.',
-                        color: 0xff0000
-                    })
-                });
-                return;
-            }
+            interaction.reply({
+                embeds: [new MessageEmbed({
+                    title: 'Error',
+                    description: 'No hangman game is currently running in this server. Guess ignored.',
+                    color: 0xff0000
+                })]
+            });
         }
+    }
 
-        // Create the new game
-        const game = this.runningGames[id] = new HangmanGame({
-            id: id,
-            difficulty: first,
-            gameList: this.runningGames
-        });
+    @Slash("hangman", {
+        description: 'Start a game of hangman, where you have to guess the card name with reaction letters'
+    })
+    async hangman(
+        @SlashChoice("Easy", 'easy')
+        @SlashChoice("Medium", 'medium')
+        @SlashChoice("Hard", 'hard')
+        @SlashOption("difficulty", { description: "How difficult the hangman game should be" })
+        difficulty: string,
+        interaction: CommandInteraction
+    ) {
+        // check for already running games
+        const id = interaction.guildId || interaction.user.id;
+        if (id in this.runningGames) {
+            interaction.reply({
+                embeds: [new MessageEmbed({
+                    title: 'Error',
+                    description: 'You can only start one hangman game every ' + GAME_TIME / 60000 + ' minutes.',
+                    color: 0xff0000
+                })]
+            });
+        } else {
+            // Create the new game
+            const game = this.runningGames[id] = new HangmanGame({
+                id: id,
+                difficulty: difficulty,
+                gameList: this.runningGames
+            });
 
-        // fetch data from API
-        rp({url: this.cardApi, json: true}).then((body: any) => {
+            // fetch data from API
+            const res = await fetch(this.cardApi);
+            const body: any = await res.json();
+
             if (body.name) {
                 game.card = body;
                 const embed = game.generateEmbed();
-                return msg.channel.send('', {embed}).then((sentMessage: any) => {
-                    game.message = sentMessage;
-                    sentMessage.react('❓');
-                    const collector = sentMessage.createReactionCollector(
-                        ({
-                            emoji
-                        }: any) => emoji.name.charCodeAt(0) === 55356 && emoji.name.charCodeAt(1) >= 56806 && emoji.name.charCodeAt(1) <= 56831,
-                        {time: GAME_TIME}
-                    ).on('collect', (reaction: any) => {
-                        // get emoji character (we only accept :regional_indicator_X: emojis)
-                        const char = String.fromCharCode(reaction.emoji.name.charCodeAt(1) - 56709);
-                        game.handleLetter(char);
-                    }).on('end', (collected: any, reason: any) => {
-                        // If we cancelled the collector, the game state has already been updated
-                        // If the time ran out, however, we know that the game was lost
-                        if (reason === 'time')
-                            game.setDone(false);
-                    });
-
-                    // Update the game object with pertinent information
-                    game.collector = collector;
-                }).catch(() => {
+                const sentMessage = <Message>await interaction.reply({embeds: [embed], fetchReply: true});
+                game.message = sentMessage;
+                sentMessage.react('❓');
+                const collector = sentMessage.createReactionCollector({
+                    filter: ({emoji}: any) => emoji.name.charCodeAt(0) === 55356 && emoji.name.charCodeAt(1) >= 56806 && emoji.name.charCodeAt(1) <= 56831,
+                    time: GAME_TIME
+                }).on('collect', (reaction: any) => {
+                    // get emoji character (we only accept :regional_indicator_X: emojis)
+                    const char = String.fromCharCode(reaction.emoji.name.charCodeAt(1) - 56709);
+                    game.handleLetter(char);
+                }).on('end', (collected: any, reason: any) => {
+                    // If we cancelled the collector, the game state has already been updated
+                    // If the time ran out, however, we know that the game was lost
+                    if (reason === 'time')
+                        game.setDone(false);
                 });
+
+                // Update the game object with pertinent information
+                game.collector = collector;
+            } else {
+                // log.error('Error getting random card from API', err.error.details);
+                interaction.reply({
+                    embeds: [new MessageEmbed({
+                        title: 'Error',
+                        description: 'Scryfall is currently offline and can\'t generate us a random card, please try again later.',
+                        color: 0xff0000
+                    })]
+                });
+                delete this.runningGames[id];
             }
-        }, (err: any) => {
-            log.error('Error getting random card from API', err.error.details);
-            msg.channel.send('', {
-                embed: new Discord.MessageEmbed({
-                    title: 'Error',
-                    description: 'Scryfall is currently offline and can\'t generate us a random card, please try again later.',
-                    color: 0xff0000
-                })
-            });
-            delete this.runningGames[id];
-        }).catch(() => {
-        });
+        }
+
     }
 }
-
-module.exports = MtgHangman;

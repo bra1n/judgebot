@@ -1,15 +1,13 @@
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'rp'.
-const rp = require("request-promise-native");
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable '_'.
-const _ = require("lodash");
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'Discord'.
-const Discord = require("discord.js");
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'utils'.
-const utils = require("../utils");
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'log'.
+import * as utils from "../utils.js";
+import {Discord, Slash, SlashChoice, SlashOption, SlashOptionParams} from "discordx";
+import {CommandInteraction, Message, MessageEmbed} from "discord.js";
+import _ from "lodash";
+import fetch from 'node-fetch';
+
 const log = utils.getLogger('standard');
 
-class Standard {
+@Discord()
+export default class Standard {
     api: any;
     cacheExpireTime: any;
     cachedEmbed: any;
@@ -18,29 +16,12 @@ class Standard {
 
     constructor() {
         this.api = "http://whatsinstandard.com/api/v5/sets.json";
-        this.commands = {
-            standard: {
-                aliases: [],
-                inline: false,
-                description: "Lists the currently standard legal sets and when they will rotate",
-                help: 'Standard is a rotating group of Magic: The Gathering sets. Most sets enter Standard when ' +
-                'they\'re released and drop out about eighteen months later. (Masters sets never enter Standard.1)\n\n' +
-                'A Standard card is a card printed or reprinted into a set currently in Standard. \n\n' +
-                'A deck which contains only Standard cards is called a Standard deck.\n\n' +
-                'From :link: http://whatsinstandard.com/',
-                examples: ["!standard"]
-            }
-        };
         this.cachedEmbed = null;
         this.cachedTime = null;
         this.cacheExpireTime = 24 * 60 * 60 * 1000; //day in milliseconds
         this.loadList().then(() => {
             log.info("Standard is cached");
         });
-    }
-
-    getCommands() {
-        return this.commands;
     }
 
     generateEmbed(setList: any) {
@@ -54,7 +35,7 @@ class Standard {
         _.forEach(groupedSetList, (value: any, key: any) => {
             descriptions.push("*Rotates ", key, ":*```", value.map((set: any) => set.name).join(" | "), "```\n");
         });
-        const embed = new Discord.MessageEmbed({
+        const embed = new MessageEmbed({
             title: "Currently in Standard",
             url: "http://whatsinstandard.com/",
             description: descriptions.join("")
@@ -64,31 +45,38 @@ class Standard {
         return embed;
     }
 
-    loadList() {
-        return rp({url: this.api, json: true}).then((body: any) => {
+    async loadList() {
+        try {
+            const res = await fetch(this.api);
+            const body = await res.json();
             if (typeof body !== "object") {
                 return null;
             } else {
-                return this.generateEmbed(body);
+                await this.generateEmbed(body);
             }
-        }, (err: any) => {
-            log.error("Error getting Standard list", err.error.details);
-            return new Discord.MessageEmbed({
+        }
+        catch(err: any) {
+            log.error("Error getting Standard list", err);
+            return new MessageEmbed({
                 title: "Standard - Error",
                 description: "Couldn't create Standard list.",
                 color: 0xff0000
             });
-        });
+        }
     }
 
-    handleMessage(command: any, parameter: any, msg: any) {
+    @Slash("standard", {
+        description: "Lists the currently standard legal sets and when they will rotate"
+    })
+    async standard(
+        interaction: CommandInteraction
+    ){
         if (this.cachedEmbed !== null && this.cachedTime !== null && new Date().getTime() - this.cachedTime < this.cacheExpireTime) {
-            return msg.channel.send("", {embed: this.cachedEmbed});
+            await interaction.reply({embeds: [this.cachedEmbed]});
         }
-        this.loadList().then((embed: any) => {
-            msg.channel.send("", {embed: embed});
-        });
+        else {
+            const embed = <MessageEmbed>await this.loadList();
+            await interaction.reply({embeds: [embed]});
+        }
     }
 }
-
-module.exports = Standard;

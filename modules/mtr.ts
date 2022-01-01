@@ -1,38 +1,39 @@
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable '_'.
-const _ = require('lodash');
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'cheerio'.
-const cheerio = require('cheerio');
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'rp'.
-const rp = require('request-promise-native');
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'utils'.
-const utils = require("../../utils");
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'log'.
-const log = utils.getLogger('mtr');
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'Discord'.
-const Discord = require('discord.js');
+import _ from "lodash";
+import cheerio from "cheerio";
+import * as utils from "../utils.js";
+import {CommandInteraction, MessageEmbed, MessageInteraction} from "discord.js";
+import {Discord, Slash, SlashOption} from "discordx";
+import fetch from "node-fetch";
 
+const log = utils.getLogger('mtr');
 const MTR_ADDRESS = process.env.MTR_ADDRESS || 'https://raw.githubusercontent.com/AEFeinstein/GathererScraper/master/rules/MagicTournamentRules-light.html';
 
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'MTR'.
-class MTR {
-    commands: any;
-    location: any;
-    maxLength: any;
-    mtrData: any;
-    thumbnail: any;
+interface Chapter {
+    key: string,
+    title: string,
+    sections: any []
+}
+
+@Discord()
+export default class MTR {
+    static location = 'http://blogs.magicjudges.org/rules/mtr';
+    static maxLength = 2040;
+    static thumbnail = 'https://assets.magicjudges.org/judge-banner/images/magic-judge.png';
+    mtrData: {
+            description: string;
+                chapters: Record<string, Chapter>;
+                sections: Record<string, any>;
+        } ;
     constructor(initialize = true) {
-        this.location = 'http://blogs.magicjudges.org/rules/mtr';
-        this.maxLength = 2040;
-        this.commands = {
-            mtr: {
-                aliases: [],
-                inline: true,
-                description: "Show an entry from Magic: The Gathering Tournament Rules",
-                help: '',
-                examples: ["!mtr 2", "!mtr 4.2"]
-            }
-        };
-        this.thumbnail = 'https://assets.magicjudges.org/judge-banner/images/magic-judge.png';
+        // this.commands = {
+        //     mtr: {
+        //         aliases: [],
+        //         inline: true,
+        //         description: "Show an entry from Magic: The Gathering Tournament Rules",
+        //         help: '',
+        //         examples: ["!mtr 2", "!mtr 4.2"]
+        //     }
+        // };
         this.mtrData = {
             description: '',
             chapters: {},
@@ -40,21 +41,36 @@ class MTR {
         };
 
         if (initialize) {
-            this.download(MTR_ADDRESS).then((mtrDocument: any) => this.init(mtrDocument));
+            setTimeout(this.init.bind(this))
         }
     }
 
-    download(url: any) {
-        return rp({url: url, simple: false, resolveWithFullResponse: true }).then((response: any) => {
-                if (response.statusCode === 200) {
-                    return response.body;
-                } else {
-                    log.error('Error loading MTR, server returned status code ' + response.statusCode);
-                }
-            }).catch((e: any) => log.error('Error loading MTR: ' + e, e));
+
+    /**
+     * Sets up the MTR data
+     */
+    async init(){
+        const mtrDocument = await this.download(MTR_ADDRESS);
+        await this.parse(mtrDocument);
     }
 
-    init(mtrDocument: any) {
+    /**
+     * Returns the MTR data as a string
+     */
+    async download(url: any): Promise<string> {
+        const res = await fetch(url);
+                if (res.status === 200) {
+                    return await res.text();
+                } else {
+                    log.error(`Error loading MTR, server returned status code ${res.status}`);
+                    return "";
+                }
+    }
+
+    /**
+     * Parses the MTR data and updates class state
+     */
+    parse(mtrDocument: string) {
         const $ = cheerio.load(mtrDocument);
         this.cleanup($);
         this.handleChapters($);
@@ -64,10 +80,11 @@ class MTR {
 
     cleanup($: any) {
         // get description from body
-        this.mtrData.description = $('body').get(0).childNodes[0].data.trim() || '';
+        const body = $('body');
+        this.mtrData.description = body.get(0).childNodes[0].data.trim() || '';
 
         // wrap standalone text nodes in p tags
-        const nodes = $('body').contents();
+        const nodes = body.contents();
         for (let i = 0; i < nodes.length; i++) {
             const node = nodes[i];
             // Text Node
@@ -134,43 +151,39 @@ class MTR {
 
     generateLink(key: any) {
         if (/^\d/.test(key)) {
-            return this.location + key.replace('.', '-');
+            return MTR.location + key.replace('.', '-');
         } else {
-            return this.location + '-' + key;
+            return MTR.location + '-' + key;
         }
     }
 
     formatChapter(chapter: any) {
         const availableSections = chapter.sections.map((s: any) => '• '+this.mtrData.sections[s].title).join('\n');
-        return new Discord.MessageEmbed({
+        return new MessageEmbed({
             title: `MTR - ${chapter.title}`,
             description: availableSections,
-            thumbnail: {url: this.thumbnail},
+            thumbnail: {url: MTR.thumbnail},
             url: 'https://blogs.magicjudges.org/rules/mtr/#'+chapter.title.toLowerCase().replace(/ +/g,'-')
         });
     }
 
     formatSection(section: any) {
-        return new Discord.MessageEmbed({
+        return new MessageEmbed({
             title: `MTR - ${section.title}`,
-            description: _.truncate(section.content, {length: this.maxLength, separator: '\n'}),
-            thumbnail: {url: this.thumbnail},
+            description: _.truncate(section.content, {length: MTR.maxLength, separator: '\n'}),
+            thumbnail: {url: MTR.thumbnail},
             url: this.generateLink(section.key)
         });
     }
 
-    getCommands() {
-        return this.commands;
-    }
-
-    find(parameter: any) {
+    find(parameter: string): MessageEmbed {
         if (parameter.indexOf('-') !== -1 || parameter.indexOf('.') !== -1) {
             // looks like a section query
             const section = this.mtrData.sections[parameter];
             if (section) {
                 return this.formatSection(section);
             }
-            return new Discord.MessageEmbed({
+            return new MessageEmbed({
                 title: 'MTR - Error',
                 description: 'This section does not exist. Try asking for a chapter to get a list of available sections for that chapter.',
                 color: 0xff0000
@@ -181,25 +194,39 @@ class MTR {
         if (chapter) {
             return this.formatChapter(chapter);
         }
-        return new Discord.MessageEmbed({
+        return new MessageEmbed({
             title: 'MTR - Error',
             description: 'This chapter does not exist.',
             color: 0xff0000
-        }).addField('Available Chapters', _.values(this.mtrData.chapters).map((c: any) => '• '+c.title));
+        }).addField('Available Chapters', _.values(this.mtrData.chapters).map((c: any) => '• '+c.title).join('\n'));
     }
 
-    handleMessage(command: any, parameter: any, msg: any) {
-        if (parameter) {
-            const embed = this.find(parameter.toLowerCase().trim().split(" ")[0]);
-            return msg.channel.send('', {embed});
+    @Slash("mtr", {
+        description: "Show an entry from Magic: The Gathering Tournament Rules"
+    })
+    async mtr(
+        @SlashOption("lookup", {
+            description: "Section of the MTR to look up",
+            required: false
+        })
+        lookup: string,
+        interaction: CommandInteraction
+    ){
+
+        if (lookup) {
+            const embed = this.find(lookup.toLowerCase().trim().split(" ")[0]);
+            await interaction.reply({embeds: [embed]});
         }
-        return msg.channel.send('', {embed: new Discord.MessageEmbed({
-            title: 'Magic Tournament Rules',
-            description: this.mtrData.description,
-            thumbnail: {url: this.thumbnail},
-            url: this.location
-        }).addField('Available Chapters', _.values(this.mtrData.chapters).map((c: any) => '• '+c.title))});
+        else {
+            return interaction.reply({
+                embeds: [new MessageEmbed({
+                    title: 'Magic Tournament Rules',
+                    description: this.mtrData.description,
+                    thumbnail: {url: MTR.thumbnail},
+                    url: MTR.location
+                }).addField('Available Chapters', _.values(this.mtrData.chapters).map((c: any) => '• ' + c.title).join("\n"))
+                ]
+            });
+        }
     }
 }
-
-module.exports = MTR;

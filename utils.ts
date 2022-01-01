@@ -1,15 +1,18 @@
-const log4js = require("log4js");
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable 'request'.
-const request = require("request");
-const chalk = require("chalk");
-// @ts-expect-error ts-migrate(2451) FIXME: Cannot redeclare block-scoped variable '_'.
-const _ = require("lodash");
-const { REST } = require('@discordjs/rest');
-const { Routes } = require('discord-api-types/v9');
+import log4js from "log4js";
+import request from "request";
+import chalk from "chalk";
+import _ from "lodash";
+import {REST} from "@discordjs/rest";
+import {Routes} from "discord-api-types/v9";
+import {Guild, Client, User} from "discord.js"
 
-const rest = new REST({ version: '9' }).setToken(process.env.DISCORD_TOKEN);
+export const token = process.env?.DISCORD_TOKEN;
+if (!token){
+    throw new Error("Token required.");
+}
+const rest = new REST({ version: '9' }).setToken(token);
 
-const modules = [
+export const modules = [
     'card',
     'hangman',
     'standard',
@@ -21,14 +24,10 @@ const modules = [
     'help'
 ];
 
-const checkInteractions = async () => {
-
-}
-
 /**
  * Update discord's list of our slash commands
  */
-const updateInteractions = async () => {
+export const updateInteractions = async () => {
     const log = getLogger('bot');
     const interactions: any = [];
     modules.forEach((module, index) => {
@@ -42,7 +41,7 @@ const updateInteractions = async () => {
 
 	try {
         log.info('Finding bot ID');
-        const identity = await rest.get(
+        const identity: any = await rest.get(
             Routes.user()
         )
 
@@ -60,8 +59,7 @@ const updateInteractions = async () => {
 }
 
 // setup logger
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'name' implicitly has an 'any' type.
-const getLogger = (name) => {
+export function getLogger(name: string){
     let logPattern = '%[[%p]%] '+chalk.red('[%c]') +' - %m';
     if (!process.env.PAPERTRAIL_API_TOKEN) {
         logPattern = '[%d{yy/MM/dd hh:mm:ss}] ' + logPattern;
@@ -75,13 +73,14 @@ const getLogger = (name) => {
 }
 
 // create a pretty log message for a user / guild
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'guild' implicitly has an 'any' ty... Remove this comment to see the full error message
-const prettyLog = ({guild, channel = {}, author = {}}, action, log = '') => {
+export const prettyLog = ({guild, channel = undefined, author = undefined}: {
+    guild: Guild,
+    channel?: any | undefined,
+    author?: User | undefined,
+}, action: string, log: string = '') => {
     const logMessage = [
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'name' does not exist on type '{}'.
-        chalk.blue('[' + (guild ? guild.name : 'direct message') + '#' + (channel.name || '') +']'),
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'username' does not exist on type '{}'.
-        chalk.yellow('[' + (author.username ? author.username + '#' + author.discriminator : 'server') + ']'),
+        chalk.blue('[' + (guild?.name || 'direct message') + '#' + (channel?.name || '') +']'),
+        chalk.yellow('[' + (author?.username ? author.username + '#' + author.discriminator : 'server') + ']'),
         chalk.magenta('[' + action + ']'),
         log
     ];
@@ -89,21 +88,22 @@ const prettyLog = ({guild, channel = {}, author = {}}, action, log = '') => {
 }
 
 // send updated stats to bots.discord.com
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bot' implicitly has an 'any' type.
-const updateServerCount = (bot) => {
-    bot.user.setPresence({
-        activity: {
+export function updateServerCount(bot: Client){
+    bot.user?.setPresence({
+       activities: [
+           {
             name: 'MTG on '+ bot.guilds.cache.size +' servers (' + bot.ws.shards.size + ' shards)',
             type: 'PLAYING',
             url: 'https://github.com/bra1n/judgebot'
         }
+       ]
     });
 
     const options = {
         url: 'https://bots.discord.pw/api/bots/240537940378386442/stats',
         method: 'POST',
         headers: {'Authorization': process.env.BOT_TOKEN},
-        body: {"server_count": bot.guilds.size || 0},
+        body: {"server_count": bot.guilds.cache.size || 0},
         json: true
     };
 
@@ -118,12 +118,4 @@ const updateServerCount = (bot) => {
         options.headers['Authorization'] = process.env.BOT_TOKEN2;
         request(options);
     }
-};
-
-module.exports = {
-    getLogger,
-    prettyLog,
-    updateServerCount,
-    modules,
-    updateInteractions
 }

@@ -1,5 +1,5 @@
-const Discord = require("discord.js");
-const _ = require("lodash");
+import { Client } from "discordx";
+import * as  _ from "lodash";
 const utils = require("./utils");
 
 const log = utils.getLogger('bot');

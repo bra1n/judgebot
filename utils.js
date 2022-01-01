@@ -2,6 +2,10 @@ const log4js = require("log4js");
 const request = require("request");
 const chalk = require("chalk");
 const _ = require("lodash");
+const { REST } = require('@discordjs/rest');
+const { Routes } = require('discord-api-types/v9');
+
+const rest = new REST({ version: '9' }).setToken(process.env.DISCORD_TOKEN);
 
 const modules = [
     'card',
@@ -15,12 +19,15 @@ const modules = [
     'help'
 ];
 
-const APP_ID = "240537940378386442"
+const checkInteractions = async () => {
+
+}
 
 /**
  * Update discord's list of our slash commands
  */
-const updateInteractions = () => {
+const updateInteractions = async () => {
+    const log = getLogger('bot');
     const interactions = [];
     modules.forEach((module, index) => {
         const moduleObject = new (require("./modules/" + module + '.js'))(modules);
@@ -31,17 +38,23 @@ const updateInteractions = () => {
             }
     });
 
-    request({
-        url: `https://discord.com/api/v8/applications/${APP_ID}/commands`,
-        method: 'PUT',
-        headers: {'Authorization': process.env.BOT_TOKEN},
-        body: interactions,
-        json: true
-    }).on('error', err => {
-        console.error(err)
-    }) .on('data', data => {
-        console.log(data.toString())
-    });
+	try {
+        log.info('Finding bot ID');
+        const identity = await rest.get(
+            Routes.user()
+        )
+
+		log.info('Started refreshing application (/) commands.');
+
+		const updateResult = await rest.put(
+			Routes.applicationCommands(identity.id) ,
+			{ body: interactions },
+		);
+
+		log.info('Successfully reloaded application (/) commands.');
+	} catch (error) {
+		console.error(error);
+	}
 }
 
 // setup logger

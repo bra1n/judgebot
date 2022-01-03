@@ -6,34 +6,48 @@ import fetch from 'node-fetch';
 
 const log = utils.getLogger('standard');
 
+interface WhatsInStandard {
+    deprecated: boolean,
+    sets: StandardSet[]
+}
+
+interface StandardSet {
+    name: string;
+    enterDate: StandardDate
+    exitDate: StandardDate
+}
+
+interface StandardDate {
+    exact: string,
+    rough: string
+}
+
 @Discord()
 export default class Standard {
-    api: any;
-    cacheExpireTime: any;
-    cachedEmbed: any;
-    cachedTime: any;
-    commands: any;
+    static api = "https://whatsinstandard.com/api/v6/standard.json";
+    static cacheExpireTime = 24 * 60 * 60 * 1000; //day in milliseconds
+
+    cachedEmbed: MessageEmbed | null;
+    cachedTime: number | null;
 
     constructor() {
-        this.api = "http://whatsinstandard.com/api/v5/sets.json";
         this.cachedEmbed = null;
         this.cachedTime = null;
-        this.cacheExpireTime = 24 * 60 * 60 * 1000; //day in milliseconds
         this.loadList().then(() => {
             log.info("Standard is cached");
         });
     }
 
-    generateEmbed(setList: any) {
+    generateEmbed(setList: WhatsInStandard): MessageEmbed {
         const currentDate = new Date();
-        const removedFutureAndPastSetList = setList.sets.filter((set: any) => {
-            return currentDate.getTime() >= new Date(set.enter_date).getTime() &&
-                (set.exit_date === null || currentDate.getTime() < new Date(set.exit_date).getTime());
+        const removedFutureAndPastSetList = setList.sets.filter((set) => {
+            return currentDate.getTime() >= new Date(set.enterDate.exact).getTime() &&
+                (set.exitDate === null || currentDate.getTime() < new Date(set.exitDate.exact).getTime());
         });
         const groupedSetList = _.groupBy(removedFutureAndPastSetList, "rough_exit_date");
-        const descriptions: any = [];
-        _.forEach(groupedSetList, (value: any, key: any) => {
-            descriptions.push("*Rotates ", key, ":*```", value.map((set: any) => set.name).join(" | "), "```\n");
+        const descriptions: string[] = [];
+        _.forEach(groupedSetList, (value, key) => {
+            descriptions.push("*Rotates ", key, ":*```", value.map(set => set.name).join(" | "), "```\n");
         });
         const embed = new MessageEmbed({
             title: "Currently in Standard",
@@ -45,17 +59,13 @@ export default class Standard {
         return embed;
     }
 
-    async loadList() {
+    async loadList(): Promise<MessageEmbed> {
         try {
-            const res = await fetch(this.api);
+            const res = await fetch(Standard.api);
             const body = await res.json();
-            if (typeof body !== "object") {
-                return null;
-            } else {
-                await this.generateEmbed(body);
-            }
+            return await this.generateEmbed(body as WhatsInStandard);
         }
-        catch(err: any) {
+        catch(err) {
             log.error("Error getting Standard list", err);
             return new MessageEmbed({
                 title: "Standard - Error",
@@ -71,7 +81,7 @@ export default class Standard {
     async standard(
         interaction: CommandInteraction
     ){
-        if (this.cachedEmbed !== null && this.cachedTime !== null && new Date().getTime() - this.cachedTime < this.cacheExpireTime) {
+        if (this.cachedEmbed !== null && this.cachedTime !== null && new Date().getTime() - this.cachedTime < Standard.cacheExpireTime) {
             await interaction.reply({embeds: [this.cachedEmbed]});
         }
         else {

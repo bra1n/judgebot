@@ -1,25 +1,103 @@
 import {CommandInteraction, Message} from "discord.js";
 import {Discord, Slash, SlashOption, SlashOptionParams} from "discordx";
-import {MessageEmbed} from "discord.js"
+import {MessageEmbed, MessageReaction} from "discord.js"
 import * as cheerio from "cheerio";
 import fetch from 'node-fetch';
 import _ from "lodash";
 import * as utils from "../utils.js";
 const log = utils.getLogger('card');
+import * as Scry from "scryfall-sdk";
 
 const scryfallSearchOption: SlashOptionParams = {
     type: "STRING",
     description: "Scryfall search term",
 };
 
+interface JudgebotCard extends Scry.Card {
+  zoom?: boolean;
+}
+
 @Discord()
 export default class MtgCardLoader {
-    cardApi: any;
-    cardApiFuzzy: any;
-    colors: any;
-    commands: any;
-    manamojis: any;
-    permissionCache: any;
+
+    static cardApi = "https://api.scryfall.com/cards/search?q=";
+    static cardApiFuzzy = "https://api.scryfall.com/cards/named?fuzzy=";
+    // Discord bots can use custom emojis globally, so we just reference these Manamoji through their code / ID
+    // (currently hosted on the Judgebot testing discord)
+    // @see https://github.com/scryfall/thopter/tree/master/manamoji
+    static manamojis: Record<string, string> = {
+        "0":"0_:344491158384410625",
+        "1":"1_:344491158723887107",
+        "10":"10:344491160280104984",
+        "11":"11:344491159965401088",
+        "12":"12:344491160435163137",
+        "13":"13:344491160674238464",
+        "14":"14:344491160619712513",
+        "15":"15:344491160586289154",
+        "16":"16:344491160808587264",
+        "17":"17:344491160468979714",
+        "18":"18:344491160720506880",
+        "19":"19:344491160498208771",
+        "2":"2_:344491158371696641",
+        "20":"20:344491161257246720",
+        "2b":"2b:344491158665429012",
+        "2g":"2g:344491159189585921",
+        "2r":"2r:344491159265083392",
+        "2u":"2u:344491159160225792",
+        "2w":"2w:344491159692771328",
+        "3":"3_:344491159210688522",
+        "4":"4_:344491159172677632",
+        "5":"5_:344491158883532801",
+        "6":"6_:344491159185260554",
+        "7":"7_:344491159021813761",
+        "8":"8_:344491159424466945",
+        "9":"9_:344491159273472020",
+        "b":"b_:608749298682822692",
+        "bg":"bg:344491161286737921",
+        "bp":"bp:608749299135807508",
+        "br":"br:344491161362366465",
+        "c":"c_:344491160636489739",
+        "chaos":"chaos:344491160267653130",
+        "e":"e_:344491160829558794",
+        "g":"g_:344491161169428481",
+        "gp":"gp:344491161102319616",
+        "gu":"gu:344491161223692300",
+        "gw":"gw:344491161139937282",
+        "half":"half:344491161164972032",
+        "hr":"hr:344491160787615748",
+        "hw":"hw:344491161181749268",
+        "infinity":"infinity:344491160619843593",
+        "q":"q_:344491161060245504",
+        "r":"r_:344491161274023938",
+        "rg":"rg:344491161295257600",
+        "rp":"rp:344491161076891648",
+        "rw":"rw:344491161316098049",
+        "s":"s_:343519207608025090",
+        "t":"t_:344491161089736704",
+        "u":"u_:344491161362235394",
+        "ub":"ub:344491161248858113",
+        "up":"up:344491161395789824",
+        "ur":"ur:608749298896863297",
+        "w":"w_:608749298896863266",
+        "wb":"wb:344491161374818304",
+        "wp":"wp:608749298544410641",
+        "wu":"wu:608749299135807512",
+        "x":"x_:344491161345327126",
+        "y":"y_:344491161374818305",
+        "z":"z_:344491161035210755"
+    };
+    // embed border colors depending on card color(s)
+    static colors: Record<string, number> = {
+        "W": 0xF8F6D8,
+        "U": 0xC1D7E9,
+        "B": 0x0D0F0F,
+        "R": 0xE49977,
+        "G": 0xA3C095,
+        "GOLD": 0xE0C96C,
+        "ARTIFACT": 0x90ADBB,
+        "LAND": 0xAA8F84,
+        "NONE": 0xDAD9DE
+    };
 
     @Slash("card", {
         description: `Search for an English Magic card by (partial) name, supports full Scryfall syntax`,
@@ -96,117 +174,34 @@ export default class MtgCardLoader {
         )
     }
 
-    constructor() {
-        this.cardApi = "https://api.scryfall.com/cards/search?q=";
-        this.cardApiFuzzy = "https://api.scryfall.com/cards/named?fuzzy=";
-        // Discord bots can use custom emojis globally, so we just reference these Manamoji through their code / ID
-        // (currently hosted on the Judgebot testing discord)
-        // @see https://github.com/scryfall/thopter/tree/master/manamoji
-        this.manamojis = {
-            "0":"0_:344491158384410625",
-            "1":"1_:344491158723887107",
-            "10":"10:344491160280104984",
-            "11":"11:344491159965401088",
-            "12":"12:344491160435163137",
-            "13":"13:344491160674238464",
-            "14":"14:344491160619712513",
-            "15":"15:344491160586289154",
-            "16":"16:344491160808587264",
-            "17":"17:344491160468979714",
-            "18":"18:344491160720506880",
-            "19":"19:344491160498208771",
-            "2":"2_:344491158371696641",
-            "20":"20:344491161257246720",
-            "2b":"2b:344491158665429012",
-            "2g":"2g:344491159189585921",
-            "2r":"2r:344491159265083392",
-            "2u":"2u:344491159160225792",
-            "2w":"2w:344491159692771328",
-            "3":"3_:344491159210688522",
-            "4":"4_:344491159172677632",
-            "5":"5_:344491158883532801",
-            "6":"6_:344491159185260554",
-            "7":"7_:344491159021813761",
-            "8":"8_:344491159424466945",
-            "9":"9_:344491159273472020",
-            "b":"b_:608749298682822692",
-            "bg":"bg:344491161286737921",
-            "bp":"bp:608749299135807508",
-            "br":"br:344491161362366465",
-            "c":"c_:344491160636489739",
-            "chaos":"chaos:344491160267653130",
-            "e":"e_:344491160829558794",
-            "g":"g_:344491161169428481",
-            "gp":"gp:344491161102319616",
-            "gu":"gu:344491161223692300",
-            "gw":"gw:344491161139937282",
-            "half":"half:344491161164972032",
-            "hr":"hr:344491160787615748",
-            "hw":"hw:344491161181749268",
-            "infinity":"infinity:344491160619843593",
-            "q":"q_:344491161060245504",
-            "r":"r_:344491161274023938",
-            "rg":"rg:344491161295257600",
-            "rp":"rp:344491161076891648",
-            "rw":"rw:344491161316098049",
-            "s":"s_:343519207608025090",
-            "t":"t_:344491161089736704",
-            "u":"u_:344491161362235394",
-            "ub":"ub:344491161248858113",
-            "up":"up:344491161395789824",
-            "ur":"ur:608749298896863297",
-            "w":"w_:608749298896863266",
-            "wb":"wb:344491161374818304",
-            "wp":"wp:608749298544410641",
-            "wu":"wu:608749299135807512",
-            "x":"x_:344491161345327126",
-            "y":"y_:344491161374818305",
-            "z":"z_:344491161035210755"
-        };
-        // embed border colors depending on card color(s)
-        this.colors = {
-            "W": 0xF8F6D8,
-            "U": 0xC1D7E9,
-            "B": 0x0D0F0F,
-            "R": 0xE49977,
-            "G": 0xA3C095,
-            "GOLD": 0xE0C96C,
-            "ARTIFACT": 0x90ADBB,
-            "LAND": 0xAA8F84,
-            "NONE": 0xDAD9DE
-        };
-        // cache for Discord permission lookup
-        this.permissionCache = {};
-    }
-
     // replace mana and other symbols with actual emojis
-    renderEmojis(text: any) {
-        return text.replace(/{[^}]+?}/ig, (match: any) => {
+    renderEmojis(text: string) {
+        return text.replace(/{[^}]+?}/ig, (match) => {
             const code = match.replace(/[^a-z0-9]/ig,'').toLowerCase();
-            return this.manamojis[code] ? '<:'+this.manamojis[code]+'>':'';
+            return MtgCardLoader.manamojis[code] ? `<:${MtgCardLoader.manamojis[code]}>`:'';
         });
     }
 
     // determine embed border color
-    getBorderColor(card: any) {
+    getBorderColor(card: Scry.Card) {
         let color;
         if (!card.colors || card.colors.length === 0) {
-            color = this.colors.NONE;
-            if (card.type_line && card.type_line.match(/artifact/i)) color = this.colors.ARTIFACT;
-            if (card.type_line && card.type_line.match(/land/i)) color = this.colors.LAND;
+            color = MtgCardLoader.colors.NONE;
+            if (card.type_line && card.type_line.match(/artifact/i)) color = MtgCardLoader.colors.ARTIFACT;
+            if (card.type_line && card.type_line.match(/land/i)) color = MtgCardLoader.colors.LAND;
         } else if (card.colors.length > 1) {
-            color = this.colors.GOLD;
+            color = MtgCardLoader.colors.GOLD;
         } else {
-            color = this.colors[card.colors[0]];
+            color = MtgCardLoader.colors[card.colors[0]];
         }
         return color;
     }
 
     // parse Gatherer rulings
-    parseGathererRulings(gatherer: any) {
+    parseGathererRulings(gatherer: string) {
         const $ = cheerio.load(gatherer);
-        const rulings: any = [];
-        $('.rulingsTable tr').each((index: any,elem: any) => {
+        const rulings: string[] = [];
+        $('.rulingsTable tr').each((index: number,elem: cheerio.Element) => {
             rulings.push('**'+$(elem).find('td:nth-child(1)').text()+':** '+$(elem).find('td:nth-child(2)').text());
             if (rulings.join('\n').length > 2040) {
                 rulings[rulings.length - 1] = '...';
@@ -217,8 +212,8 @@ export default class MtgCardLoader {
     }
 
     // generate description text from a card object
-    generateDescriptionText(card: any) {
-        const ptToString = (card: any) => '**'+card.power.replace(/\*/g, '\\*') + "/" + card.toughness.replace(/\*/g, '\\*')+'**';
+    generateDescriptionText(card: Scry.Card) {
+        const ptToString = (card: Scry.CardFace | Scry.Card) => `**${card.power?.replace(/\*/g, '\\*')}/${card.toughness?.replace(/\*/g, '\\*')}**`;
 
         const description = [];
         if (card.type_line) { // bold type line
@@ -229,7 +224,7 @@ export default class MtgCardLoader {
         }
         if (card.oracle_text) { // reminder text in italics
             const text = card.printed_text || card.oracle_text;
-            description.push(text.replace(/[()]/g, (m: any) => m === '(' ? '*(':')*'));
+            description.push(text.replace(/[()]/g, (m: string) => m === '(' ? '*(':')*'));
         }
         if (card.flavor_text) { // flavor text in italics
             description.push('*' + card.flavor_text+'*');
@@ -242,10 +237,10 @@ export default class MtgCardLoader {
         }
         if (card.card_faces) {
             // split cards are special
-            card.card_faces.forEach((face: any) => {
+            card.card_faces.forEach((face: Scry.CardFace) => {
                 description.push('**'+face.type_line+'**');
                 if (face.oracle_text) {
-                    description.push(face.oracle_text.replace(/[()]/g, (m: any) => m === '(' ? '*(':')*'));
+                    description.push(face.oracle_text.replace(/[()]/g, (m: string) => m === '(' ? '*(':')*'));
                 }
                 if (face.power) {
                     description.push(ptToString(face));
@@ -257,8 +252,7 @@ export default class MtgCardLoader {
     }
 
     // generate the embed card
-    generateEmbed(cards: any, command: any, hasEmojiPermission: any): Promise<MessageEmbed> {
-        return new Promise(resolve => {
+    async generateEmbed(cards: JudgebotCard[], command: string, hasEmojiPermission: boolean): Promise<MessageEmbed> {
             const card = cards[0];
 
             // generate embed title and description text
@@ -270,11 +264,13 @@ export default class MtgCardLoader {
             }
 
             // DFC use card_faces array for each face
+            // @ts-ignore: https://github.com/ChiriVulpes/scryfall-sdk/pull/42
             if (card.card_faces && (card.layout === 'transform' || card.layout === 'modal_dfc')) {
                 if (card.card_faces[0].mana_cost) {
                     title += ' ' + card.card_faces[0].mana_cost;
                 }
                 // Modal DFCs might have spells on both sides at some point so putting this here just in case
+                // @ts-ignore: https://github.com/ChiriVulpes/scryfall-sdk/pull/42
                 if (card.layout === 'modal_dfc' && card.card_faces[1].mana_cost) {
                     title += ' // ' + card.card_faces[1].mana_cost;
                 }
@@ -293,7 +289,7 @@ export default class MtgCardLoader {
             let footer = "Use !help to get a list of available commands.";
             if(cards.length > 1) {
                 footer = (cards.length - 1) + ' other hits:\n';
-                footer += cards.slice(1,6).map((cardObj: any) => cardObj.printed_name || cardObj.name).join('; ');
+                footer += cards.slice(1,6).map((cardObj: JudgebotCard) => cardObj.printed_name || cardObj.name).join('; ');
                 if (cards.length > 6) footer += '; ...';
             }
 
@@ -303,6 +299,7 @@ export default class MtgCardLoader {
                 description,
                 footer: {text: footer},
                 url: card.scryfall_uri,
+                // @ts-ignore: https://github.com/ChiriVulpes/scryfall-sdk/pull/42
                 color: this.getBorderColor(card.layout === 'transform' || card.layout === 'modal_dfc' ? card.card_faces[0]:card),
                 thumbnail: card.image_uris ? {url: card.image_uris.small} : undefined,
                 image: card.zoom && card.image_uris ? {url: card.image_uris.normal} : undefined
@@ -332,30 +329,27 @@ export default class MtgCardLoader {
 
             // add rulings loaded from Gatherer, if needed
             if(command.match(/^ruling/) && card.related_uris.gatherer) {
-                fetch(card.related_uris.gatherer).then((gatherer: any) => {
+                const res = await fetch(card.related_uris.gatherer);
+                const gatherer = await res.text();
                     embed.setAuthor('Gatherer rulings for');
                     embed.setDescription(this.parseGathererRulings(gatherer));
-                    resolve(embed);
-                });
+                    return embed;
             } else {
-                resolve(embed);
+                return embed;
             }
-        });
     }
 
     /**
      * Fetch the cards from Scryfall
      */
-    async getCards(cardName: any) {
-        let res = await fetch(this.cardApi + encodeURIComponent(cardName + ' include:extras'));
-        let body: any = await res.json();
-        if (body.data && body.data.length) {
+    async getCards(cardName: string): Promise<Scry.Card[]> {
+        let cards = await Scry.Cards.search(cardName, {include_extras: true}).cancelAfterPage().waitForAll();
+        if (cards.length > 0) {
             // sort the cards to better match the search query (issue #87)
-            return body.data.sort((a: any, b: any) => this.scoreHit(b, cardName) - this.scoreHit(a, cardName));
+            return cards.sort((a , b) => this.scoreHit(b, cardName) - this.scoreHit(a, cardName));
         } else {
             log.info('Falling back to fuzzy search for ' + cardName);
-            let res = await fetch(this.cardApiFuzzy + encodeURIComponent(cardName));
-            return await res.json();
+            return [await Scry.Cards.byName(cardName, true)];
         }
     }
 
@@ -364,9 +358,9 @@ export default class MtgCardLoader {
      * @param card
      * @param query
      */
-    scoreHit(card: any, query: any) {
+    scoreHit(card: Scry.Card, query: string) {
         const name = (card.printed_name || card.name).toLowerCase().replace(/[^a-z0-9]/g, '');
-        const nameQuery = query.split(" ").filter((q: any) => !q.match(/[=:()><]/)).join(" ").toLowerCase().replace(/[^a-z0-9]/g, '');
+        const nameQuery = query.split(" ").filter((q) => !q.match(/[=:()><]/)).join(" ").toLowerCase().replace(/[^a-z0-9]/g, '');
         let score = 0;
         if (name === nameQuery) {
             // exact match - to the top!
@@ -393,7 +387,7 @@ export default class MtgCardLoader {
         if (!cardName) return;
         const permission = true; // assume we have custom emoji permission for now
         // fetch data from API
-        const cards = await this.getCards(cardName);
+        const cards: JudgebotCard[] = await this.getCards(cardName);
         // check if there are results
         if (cards.length > 0) {
             // generate embed
@@ -406,11 +400,11 @@ export default class MtgCardLoader {
                 if (!command.match(/^art/)) {
                     await sentMessage.react('🔍');
                 }
-                const handleReaction = (reaction: any) => {
+                const handleReaction = (reaction: MessageReaction) => {
                     if (reaction.emoji.toString() === '⬅') {
-                        cards.unshift(cards.pop());
+                        cards.unshift(<Scry.Card> cards.pop());
                     } else if (reaction.emoji.toString() === '➡') {
-                        cards.push(cards.shift());
+                        cards.push(<Scry.Card> cards.shift());
                     } else {
                         // toggle zoom
                         cards[0].zoom = !cards[0].zoom;

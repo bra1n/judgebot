@@ -1,17 +1,37 @@
-import {CommandInteraction, MessageEmbed} from "discord.js";
+import {AutocompleteInteraction, CommandInteraction, MessageEmbed} from "discord.js";
 import * as utils from "../utils.js";
 import fetch from "node-fetch";
 import _ from "lodash";
 const log = utils.getLogger('ipg');
 const IPG_ADDRESS = process.env.IPG_ADDRESS || "https://raw.githubusercontent.com/hgarus/mtgdocs/master/docs/ipg.json";
-import {Discord, Slash, SlashChoice, SlashOption, SlashOptionParams} from "discordx";
+import {DApplicationCommand, Discord, Slash, SlashChoice, SlashOption, SlashOptionParams, MetadataStorage} from "discordx";
+
+interface IpgEntry {
+        title: string;
+        url: string;
+        text: string;
+}
+
+interface IpgChapter extends  IpgEntry{
+    sections: string[];
+}
+
+interface IpgSection extends IpgEntry {
+    subsections: string[];
+    penalty: string;
+    subsectionContents: Record<string, IpgSubSection>;
+}
+
+interface IpgSubSection {
+    title: string;
+    text: string[];
+}
+
+type IpgData = Record<string, IpgChapter | IpgSection>
 
 @Discord()
 export default class IPG {
-    aliases: any;
-    commands: any;
-    ipgData: any;
-    thumbnail: any;
+    ipgData: IpgData;
     static location = "http://blogs.magicjudges.org/rules/ipg";
     static maxLength = 2040;
     static thumbnail = 'https://assets.magicjudges.org/judge-banner/images/magic-judge.png';
@@ -66,16 +86,7 @@ export default class IPG {
         'cheating': '4.8'
     };
 
-    constructor(initialize = true) {
-        // this.commands = {
-        //     ipg: {
-        //         aliases: [],
-        //         inline: true,
-        //         description: "Show an entry from the Infraction Procedure Guide",
-        //         help: '',
-        //         examples: ["!ipg 4.2", "!ipg grv", "!ipg hce examples"]
-        //     }
-        // };
+    constructor(initialize: boolean = true) {
         this.ipgData = {};
         if (initialize) {
             (async () => {
@@ -83,12 +94,12 @@ export default class IPG {
                 try {
                     res = await fetch(IPG_ADDRESS);
                 }
-                catch (err : any) {
+                catch (err) {
                     log.error(`Error loading IPG: ${err}`);
                     return;
                 }
                 if (res.status === 200) {
-                    this.ipgData = await res.json();
+                    this.ipgData = await res.json() as IpgData;
                     log.info("IPG Ready");
                 } else {
                     log.error("Error loading IPG, server returned status code " + res.status);
@@ -97,57 +108,64 @@ export default class IPG {
         }
     }
 
-    formatPreview(entry: any) {
-        return `**${entry.title}**\n${entry.text}`;
+    formatPreview(entry: IpgEntry | IpgSubSection) {
+        let text : string;
+        if (Array.isArray(entry.text)){
+            text = entry.text.join(" ");
+        }
+        else {
+            text = entry.text;
+        }
+        return `**${entry.title}**\n${text}`;
     }
 
     // IPG Chapter (like "2")
-    formatChapterEntry(entry: any) {
+    formatChapterEntry(entry: IpgChapter) {
         const text = entry.text || this.formatPreview(this.ipgData[entry.sections[0]]);
 
         return new MessageEmbed({
             title: `IPG - ${entry.title}`,
             description: _.truncate(text, {length: IPG.maxLength, separator: '\n'}),
-            thumbnail: {url: this.thumbnail},
+            thumbnail: {url: IPG.thumbnail},
             url: entry.url
-        }).addField('Available Sections', entry.sections.map((s: any) => `• ${this.ipgData[s].title}`).join("\n"));
+        }).addField('Available Sections', entry.sections.map((s) => `• ${this.ipgData[s].title}`).join("\n"));
     }
 
     // IPG Section (like "2.1")
-    formatSectionEntry(entry: any) {
+    formatSectionEntry(entry: IpgSection) {
         const text = entry.text || this.formatPreview(entry.subsectionContents[entry.subsections[0]]);
         const embed = new MessageEmbed({
             title: `IPG - ${entry.title}`,
             description: _.truncate(text, {length: IPG.maxLength, separator: '\n'}),
-            thumbnail: {url: this.thumbnail},
+            thumbnail: {url: IPG.thumbnail},
             url: entry.url
         });
         if (entry.penalty) {
             embed.addField('Penalty', entry.penalty);
         }
         if (entry.subsections.length) {
-            embed.addField('Available Subsections', entry.subsections.map((s: any) => `• ${s}`));
+            embed.addField('Available Subsections', entry.subsections.map((s) => `• ${s}`).join('\n'));
         }
 
         return embed;
     }
 
     // IPG Subsection (like "2.1 definition")
-    formatSubsectionEntry(sectionEntry: any, subsectionEntry: any) {
-        const otherSections = sectionEntry.subsections.filter((s: any) => s !== _.kebabCase(subsectionEntry.title));
+    formatSubsectionEntry(sectionEntry: IpgSection, subsectionEntry: IpgSubSection) {
+        const otherSections = sectionEntry.subsections.filter((s) => s !== _.kebabCase(subsectionEntry.title));
 
         return new MessageEmbed({
             title: `IPG - ${sectionEntry.title} - ${subsectionEntry.title}`,
             description: _.truncate(subsectionEntry.text.join("\n\n"),{length: IPG.maxLength, separator: '\n'}),
-            thumbnail: {url: this.thumbnail},
+            thumbnail: {url: IPG.thumbnail},
             footer: {text: `Other available subsections: ${otherSections.join(', ')}`},
             url: sectionEntry.url + '#' + subsectionEntry.title.toLowerCase().replace(/ /g,'-')
         });
     }
 
     // main lookup method
-    find(parameters: any) {
-        const entry = this.ipgData[parameters[0]];
+    find(lookup: string, subsection?: string) {
+        const entry = this.ipgData[lookup];
         if (!entry) {
             let availableEntries = _.keys(this.ipgData);
             availableEntries.sort();
@@ -158,60 +176,56 @@ export default class IPG {
             }).addField('Available Chapters', this.getChapters());
         }
 
-        if (parameters[1] && entry.subsections && entry.subsectionContents[parameters[1]]) {
-            // we have a second parameter and available subsections that match it
-            return this.formatSubsectionEntry(entry, entry.subsectionContents[parameters[1]]);
-        } else {
-            // only show the main entry
-            if (parameters[0].indexOf('.') === -1) {
-                return this.formatChapterEntry(entry);
+        // This is a type guard, since subsections distinguishes between chapters and sections
+        if ('subsections' in entry){
+            if (subsection && entry.subsections && entry.subsectionContents[subsection]) {
+                // we have a second parameter and available subsections that match it
+                return this.formatSubsectionEntry(entry, entry.subsectionContents[subsection]);
             } else {
                 return this.formatSectionEntry(entry);
             }
         }
+        else {
+            return this.formatChapterEntry(entry);
+        }
+
     }
 
     getChapters(): string {
         return Object
             .values(this.ipgData)
-            .filter((c: any) => c.title.match(/^\d+\s/))
-            .map((c: any) => '• '+c.title.replace(/^(\d+)\s/,'$1. '))
+            .filter((c) => c.title.match(/^\d+\s/))
+            .map((c) => '• '+c.title.replace(/^(\d+)\s/,'$1. '))
             .join("\n");
     }
-
-    // handleParameters(parameter: any) {
-    //     let parameters = parameter.trim().toLowerCase().split(/\s+/);
-    //     if (this.aliases[parameters[0]]) {
-    //         parameters[0] = this.aliases[parameters[0]];
-    //     }
-    //     return parameters;
-    // }
 
     @Slash("ipg", {
         description: "Show an entry from the Infraction Procedure Guide",
     })
     async ipg(
-        @SlashOption("lookup")
+        @SlashOption("section", {
+            description: 'IPG section number e.g. "2.5", or an alias for one e.g. "grv" (Game Rule Violation)',
+            type: "STRING",
+            autocomplete: (interaction: AutocompleteInteraction, cmd: DApplicationCommand) => {
+                console.log(MetadataStorage);
+                interaction.respond([
+                        // @ts-ignore
+                        ...Object.keys(this.ipgData).map(key => ({name: key, value: key})),
+                        ...Object.keys(IPG.aliases).map(key => ({name: key, value: key}))
+                    ]);
+            }
+        })
        lookup: string,
-       interaction: CommandInteraction
+       interaction: CommandInteraction,
+        @SlashOption("subsection", {
+            description: 'Subsection name, e.g. "philosophy"',
+            required: false
+        })
+            subsection?: string,
     ){
-        const embed = this.find(lookup);
+        const embed = this.find(lookup, subsection);
         await interaction.reply({
             embeds: [embed]
         })
     }
-
-    // handleMessage(command: any, parameter: any, msg: any) {
-    //     if (parameter) {
-    //         const embed = this.find(this.handleParameters(parameter));
-    //         return msg.channel.send('', {embed});
-    //     } else {
-    //         return msg.channel.send('', {embed: new MessageEmbed({
-    //             title: 'Magic Infraction Procedure Guide',
-    //             description: this.ipgData.description,
-    //             thumbnail: {url: this.thumbnail},
-    //             url: IPG.location
-    //         }).addField('Available Chapters', this.getChapters())});
-    //     }
-    // }
 }

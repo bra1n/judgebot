@@ -8,7 +8,7 @@ import {Discord, Slash, SlashChoice, SlashOption, SlashOptionParams} from "disco
 
 @Discord()
 export default class StoreLocator {
-    static geocoder = 'https://maps.googleapis.com/maps/api/geocode/json?new_forward_geocoder=true&key=' + process.env.GOOGLE_TOKEN + '&address=';
+    static geocoder = `https://maps.googleapis.com/maps/api/geocode/json?new_forward_geocoder=true&key=${process.env.GOOGLE_TOKEN}&address=`;
     static googleStaticMap = 'https://maps.googleapis.com/maps/api/staticmap?scale=2&size=640x320&maptype=' +
         'roadmap&format=png&visual_refresh=true&key=' + process.env.GOOGLE_TOKEN;
     static googleStaticMapStandardMarkup = '&markers=size:mid|color:0x513dc2|';
@@ -84,27 +84,9 @@ export default class StoreLocator {
     storeSearch: Fuse<any, any> | null;
 
     constructor() {
-
-        // this.commands = {
-        //     stores: {
-        //         aliases: ['store'],
-        //         inline: false,
-        //         description: "Lists the first 6 stores that are closest to the specified location",
-        //         help: 'This command shows you the closest stores and a link to their events for a given location.',
-        //         examples: ["!stores New York"]
-        //     },
-        //     events: {
-        //         aliases: ['event'],
-        //         inline: false,
-        //         description: "Lists the details and next 6 events for a store, optionally filtered by event type or format",
-        //         help: 'This command allows you to look up a store by its name and returns the next 6 MTG events that are scheduled there. ' +
-        //         'Filtering by event type or format is supported through the first parameter. Common event types: FNM, Prerelease, PPTQ, RPTQ. ' +
-        //         'Common Formats: standard, modern, legacy, vintage, draft',
-        //         examples: ["!events athena games", "!events pptq athena games", "!events standard athena games"]
-        //     }
-        // store cache
         this.stores = [];
         this.storeSearch = null;
+        // This doesn't work
         // (async () => {
         //     await this.fetchStores();
         // })();

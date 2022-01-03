@@ -11,7 +11,13 @@ const MTR_ADDRESS = process.env.MTR_ADDRESS || 'https://raw.githubusercontent.co
 interface Chapter {
     key: string,
     title: string,
-    sections: any []
+    sections: string[]
+}
+
+interface Section {
+    key: string,
+    title: string,
+    content: string
 }
 
 @Discord()
@@ -22,18 +28,9 @@ export default class MTR {
     mtrData: {
             description: string;
                 chapters: Record<string, Chapter>;
-                sections: Record<string, any>;
+                sections: Record<string, Section>;
         } ;
     constructor(initialize = true) {
-        // this.commands = {
-        //     mtr: {
-        //         aliases: [],
-        //         inline: true,
-        //         description: "Show an entry from Magic: The Gathering Tournament Rules",
-        //         help: '',
-        //         examples: ["!mtr 2", "!mtr 4.2"]
-        //     }
-        // };
         this.mtrData = {
             description: '',
             chapters: {},
@@ -57,7 +54,7 @@ export default class MTR {
     /**
      * Returns the MTR data as a string
      */
-    async download(url: any): Promise<string> {
+    async download(url: string): Promise<string> {
         const res = await fetch(url);
                 if (res.status === 200) {
                     return await res.text();
@@ -78,13 +75,14 @@ export default class MTR {
         log.info('MTR Ready');
     }
 
-    cleanup($: any) {
+    cleanup($: cheerio.Root) {
         // get description from body
         const body = $('body');
         this.mtrData.description = body.get(0).childNodes[0].data.trim() || '';
 
         // wrap standalone text nodes in p tags
-        const nodes = body.contents();
+        // @ts-ignore
+        const nodes: Node[] = body.contents();
         for (let i = 0; i < nodes.length; i++) {
             const node = nodes[i];
             // Text Node
@@ -94,16 +92,16 @@ export default class MTR {
         }
 
         // strip out p tags containing only whitespace
-        $('p').filter((i: any, e: any) => /^\s*$/.test($(e).text())).remove();
+        $('p').filter((i, e) => /^\s*$/.test($(e).text())).remove();
 
         // mark chapter headers
-        $('h2').filter((i: any, e: any) => /^\d+\.\s/.test($(e).text().trim())).addClass('chapter-header');
+        $('h2').filter((i, e) => /^\d+\.\s/.test($(e).text().trim())).addClass('chapter-header');
         // mark section headers
-        $('h1').filter((i: any, e: any) => /^MTR (\d+\.\d+\s)/.test($(e).text().trim())).addClass('section-header');
+        $('h1').filter((i, e) => /^MTR (\d+\.\d+\s)/.test($(e).text().trim())).addClass('section-header');
     }
 
-    handleChapters($: any) {
-        $('.chapter-header').each((i: any, e: any) => {
+    handleChapters($: cheerio.Root) {
+        $('.chapter-header').each((i, e) => {
             const title = $(e).text().trim();
             const number = title.split('.', 1)[0];
             this.mtrData.chapters[number] = {
@@ -114,8 +112,8 @@ export default class MTR {
         });
     }
 
-    handleSections($: any) {
-        $('.section-header').each((i: any, e: any) => {
+    handleSections($: cheerio.Root) {
+        $('.section-header').each((i, e) => {
 
             const title = $(e).text().substr(4).trim();
             const key = title.split(/\s/, 1)[0];
@@ -131,7 +129,7 @@ export default class MTR {
         });
     }
 
-    handleSectionContent($: any, sectionHeader: any, title: any, number: any) {
+    handleSectionContent($: cheerio.Root, sectionHeader: cheerio.Cheerio, title: string, number: string) {
         /* on most sections we can just use the text, special cases are:
          *   - banlists (sections ending in deck construction), these are basically long lists of sets and cards
          */
@@ -143,13 +141,14 @@ export default class MTR {
 
         // there are some headers which are neither section nor chapter headers interspersed in the sections
         const sectionContent = sectionHeader.nextUntil('.section-header,.chapter-header').wrap('<div></div>').parent();
-        sectionContent.find('h4').replaceWith((i: any, e: any) => `<p>\n\n**${$(e).text().trim()}**\n\n</p>`);
+        // @ts-ignore
+        sectionContent.find('h4').replaceWith((i, e) => `<p>\n\n**${$(e).text().trim()}**\n\n</p>`);
 
         // clean up line breaks
         return sectionContent.text().trim().replace(/\n\s*\n/g, '#break#').replace(/\n/g,' ').replace(/#break#/g,'\n\n');
     }
 
-    generateLink(key: any) {
+    generateLink(key: string) : string {
         if (/^\d/.test(key)) {
             return MTR.location + key.replace('.', '-');
         } else {
@@ -157,8 +156,8 @@ export default class MTR {
         }
     }
 
-    formatChapter(chapter: any) {
-        const availableSections = chapter.sections.map((s: any) => '• '+this.mtrData.sections[s].title).join('\n');
+    formatChapter(chapter: Chapter): MessageEmbed {
+        const availableSections = chapter.sections.map((s) => '• '+this.mtrData.sections[s].title).join('\n');
         return new MessageEmbed({
             title: `MTR - ${chapter.title}`,
             description: availableSections,
@@ -167,7 +166,7 @@ export default class MTR {
         });
     }
 
-    formatSection(section: any) {
+    formatSection(section: Section): MessageEmbed {
         return new MessageEmbed({
             title: `MTR - ${section.title}`,
             description: _.truncate(section.content, {length: MTR.maxLength, separator: '\n'}),
@@ -198,7 +197,7 @@ export default class MTR {
             title: 'MTR - Error',
             description: 'This chapter does not exist.',
             color: 0xff0000
-        }).addField('Available Chapters', _.values(this.mtrData.chapters).map((c: any) => '• '+c.title).join('\n'));
+        }).addField('Available Chapters', _.values(this.mtrData.chapters).map((c) => '• '+c.title).join('\n'));
     }
 
     @Slash("mtr", {
@@ -224,7 +223,7 @@ export default class MTR {
                     description: this.mtrData.description,
                     thumbnail: {url: MTR.thumbnail},
                     url: MTR.location
-                }).addField('Available Chapters', _.values(this.mtrData.chapters).map((c: any) => '• ' + c.title).join("\n"))
+                }).addField('Available Chapters', _.values(this.mtrData.chapters).map((c) => '• ' + c.title).join("\n"))
                 ]
             });
         }

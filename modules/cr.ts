@@ -10,9 +10,8 @@ const CR_ADDRESS = process.env.CR_ADDRESS || "http://cr.vensersjournal.com";
 
 @Discord()
 export default class CR {
-    crData: any;
-    glossary: any;
-    maxLength: any;
+    crData: Record<string, string>;
+    glossary:  Record<string, string>;
     static location = "http://blogs.magicjudges.org/rules/cr";
     static thumbnail = 'https://assets.magicjudges.org/judge-banner/images/magic-judge.png';
     static maxLength = 2040;
@@ -28,12 +27,12 @@ export default class CR {
             const res = await fetch(CR_ADDRESS);
             const buff = await res.buffer();
             this.parseCr(iconv.decode(buff, 'utf-8'));
-        } catch (err: any) {
+        } catch (err) {
             log.error("Error loading CR: " + err);
         }
     }
 
-    parseCr(crText: any) {
+    parseCr(crText: string) {
         // Standardise all linebreaks. \r\n → \n for pre-2020 rules, but for 2020 we have to \r → \n
         crText = crText.replace(/\r\n/g, "\n").replace(/\r/g, '\n');
 
@@ -44,7 +43,8 @@ export default class CR {
 
         this.glossary = this.parseGlossary(glossaryText);
         this.crData = this.parseRules(rulesText, this.glossary);
-        this.crData.description = crText.match(/effective as of (.*?)\./)[1];
+        const descr = crText.match(/effective as of (.*?)\./);
+        this.crData.description = descr? descr[1] : "";
         log.info("CR Ready, effective "+this.crData.description);
     }
 
@@ -88,7 +88,7 @@ export default class CR {
             entry = this.highlightRules(newEntry.join(" "));
 
             crEntries[number] = '';
-            entry.split('\n').forEach((line: any) => {
+            entry.split('\n').forEach((line) => {
                 if (line.match(/^Example: /i)) {
                     if (!crEntries[number+' ex']) crEntries[number+' ex'] = '';
                     crEntries[number+' ex'] += line.replace(/^Example: /i, '**Example:** ') + '\n\n';

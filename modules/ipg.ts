@@ -1,4 +1,4 @@
-import {AutocompleteInteraction, CommandInteraction, MessageEmbed} from "discord.js";
+import {ApplicationCommandOptionChoice, AutocompleteInteraction, CommandInteraction, MessageEmbed} from "discord.js";
 import * as utils from "../utils.js";
 import fetch from "node-fetch";
 import _ from "lodash";
@@ -32,6 +32,7 @@ type IpgData = Record<string, IpgChapter | IpgSection>
 @Discord()
 export default class IPG {
     ipgData: IpgData;
+    suggestions: ApplicationCommandOptionChoice[];
     static location = "http://blogs.magicjudges.org/rules/ipg";
     static maxLength = 2040;
     static thumbnail = 'https://assets.magicjudges.org/judge-banner/images/magic-judge.png';
@@ -88,24 +89,43 @@ export default class IPG {
 
     constructor(initialize: boolean = true) {
         this.ipgData = {};
+        this.suggestions = [];
         if (initialize) {
-            (async () => {
-                let res;
-                try {
-                    res = await fetch(IPG_ADDRESS);
-                }
-                catch (err) {
-                    log.error(`Error loading IPG: ${err}`);
-                    return;
-                }
-                if (res.status === 200) {
-                    this.ipgData = await res.json() as IpgData;
-                    log.info("IPG Ready");
-                } else {
-                    log.error("Error loading IPG, server returned status code " + res.status);
-                }
-            })();
+            setTimeout(this.init.bind(this));
         }
+    }
+
+    /**
+     * Run startup for this module
+     */
+    async init(){
+        let res;
+        try {
+            res = await fetch(IPG_ADDRESS);
+        }
+        catch (err) {
+            log.error(`Error loading IPG: ${err}`);
+            return;
+        }
+        if (res.status === 200) {
+            this.ipgData = await res.json() as IpgData;
+            log.info("IPG Successfully Parsed");
+        } else {
+            log.error("Error loading IPG, server returned status code " + res.status);
+        }
+
+        for (let key in this.ipgData){
+            this.suggestions.push({
+                value: key,
+                name: this.ipgData[key].title
+            });
+        }
+        // for (let key in IPG.aliases){
+        //     this.suggestions.push({
+        //         value: key,
+        //         name: this.ipgData[IPG.aliases[key]].title
+        //     });
+        // }
     }
 
     formatPreview(entry: IpgEntry | IpgSubSection) {
@@ -188,7 +208,6 @@ export default class IPG {
         else {
             return this.formatChapterEntry(entry);
         }
-
     }
 
     getChapters(): string {
@@ -206,22 +225,22 @@ export default class IPG {
         @SlashOption("section", {
             description: 'IPG section number e.g. "2.5", or an alias for one e.g. "grv" (Game Rule Violation)',
             type: "STRING",
-            autocomplete: (interaction: AutocompleteInteraction, cmd: DApplicationCommand) => {
-                console.log(MetadataStorage);
-                interaction.respond([
-                        // @ts-ignore
-                        ...Object.keys(this.ipgData).map(key => ({name: key, value: key})),
-                        ...Object.keys(IPG.aliases).map(key => ({name: key, value: key}))
-                    ]);
+            autocomplete: async function(this: IPG, interaction: AutocompleteInteraction, cmd: DApplicationCommand){
+                const query = interaction.options.data.filter(opt => opt.name === "section")[0];
+                await interaction.respond(
+                    this.suggestions
+                        .filter(hit => hit.name.startsWith(query.value as string))
+                        .slice(0, 25)
+                );
             }
         })
        lookup: string,
-       interaction: CommandInteraction,
         @SlashOption("subsection", {
             description: 'Subsection name, e.g. "philosophy"',
             required: false
         })
-            subsection?: string,
+            subsection: string,
+        interaction: CommandInteraction,
     ){
         const embed = this.find(lookup, subsection);
         await interaction.reply({

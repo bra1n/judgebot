@@ -1,9 +1,22 @@
 import _ from "lodash";
 import * as utils from "../utils.js";
 import MtgCardLoader from "./card.js";
-import {CommandInteraction, Message, MessageEmbed, MessageReaction, ReactionCollector} from "discord.js";
+import {
+    BaseCommandInteraction,
+    ButtonInteraction,
+    CommandInteraction, Interaction, InteractionCollector,
+    Message,
+    MessageActionRow,
+    MessageButton,
+    MessageEmbed, MessageInteraction,
+    MessageOptions,
+    MessageReaction,
+    MessageSelectMenu,
+    ReactionCollector
+} from "discord.js";
 import {Discord, Slash, SlashChoice, SlashOption} from "discordx";
 import * as Scry from "scryfall-sdk";
+import {MessageButtonStyles} from "discord.js/typings/enums";
 
 const log = utils.getLogger('hangman');
 const cardFetcher = new MtgCardLoader();
@@ -17,25 +30,34 @@ enum Difficulty {
 }
 
 interface HangmanGameProps {
-        id: string;
-        gameList: Record<string, HangmanGame>;
-        message?: Message;
-        collector?: ReactionCollector;
-        card: Scry.Card;
-        difficulty: Difficulty;
+    id: string;
+    gameList: Record<string, HangmanGame>;
+    message?: Message;
+    collector?: InteractionCollector<any>;
+    card: Scry.Card;
+    difficulty: Difficulty;
 
 }
 
 class HangmanGame {
+    static ALPHABET = [...'abcdefghijklmnopqrstuvwxyz'];
+    // ({
+    //     value: letter,
+    //     description: `Guess ${letter}`,
+    //     // emoji: letter.charCodeAt(0) + 56709,
+    //     label: letter,
+    //     default: letter === "a"
+    // }));
+    //
     card: Scry.Card;
-    collector: ReactionCollector | null;
+    collector: InteractionCollector<any> | null;
     difficulty: Difficulty;
     done: boolean;
     gameList: Record<string, HangmanGame>;
     gameSuccess: boolean;
     id: string;
     letters: Set<string>;
-    message: Message | null ;
+    message: Message | null;
     wrongGuesses: number;
 
     constructor({
@@ -61,51 +83,54 @@ class HangmanGame {
 
     /**
      * Handle a user guessing a letter in the card name
-     * @param {String} char The character that was guessed
      */
-    handleLetter(char: string) {
+    async handleLetter(interaction: ButtonInteraction) {
         // Letters is a set, which handles duplicates for us
-        this.letters.add(char);
-        this.checkDone();
-        this.updateEmbed();
+        this.letters.add(interaction.customId);
+        await this.checkDone(interaction);
+        await this.updateEmbed(interaction);
     }
 
     /**
      * Handle a user guessing the entire card name
      */
-    async handleGuess(guess: string, msg: CommandInteraction) {
+    async handleGuess(guess: string, interaction: CommandInteraction) {
         const correct = this.card.name.toLowerCase();
         if (guess.includes(correct)) {
-            // If they're correct, pretend we guessed all the letters individually
-            this.setDone(true);
-            this.updateEmbed();
+            await this.setDone(true);
+            await interaction.reply('✅');
+            await this.updateEmbed(interaction);
         } else {
             this.wrongGuesses++;
-            this.checkDone();
-            await msg.reply('❎');
-            this.updateEmbed();
+            await this.checkDone(interaction);
+            await interaction.reply('❎');
+            await this.updateEmbed(interaction);
         }
     }
 
     /**
      * Checks if the game should finish
+     * Returns true if we are now done.
      */
-    checkDone() {
+    async checkDone(interaction?: Interaction): Promise<boolean> {
         if (!this.missing.length) {
-            this.setDone(true);
+            await this.setDone(true, interaction);
+            return true;
         }
         if (this.wrong > 6) {
-            this.setDone(false);
+            await this.setDone(false, interaction);
+            return true;
         }
+        return false;
     }
 
     /**
      * Indicates that this game is finished
      */
-    setDone(correct: boolean = false) {
+    async setDone(correct: boolean = false, interaction?: Interaction) {
         this.done = true;
         this.gameSuccess = correct;
-        this.updateEmbed();
+        await this.updateEmbed(interaction);
         if (this.collector) {
             this.collector.stop('cancelled');
         }
@@ -117,14 +142,18 @@ class HangmanGame {
     /**
      * Using the stored parameters, updates the embed for the specified game
      */
-    updateEmbed() {
-        if (this.message) {
-            this.message.edit({embeds: [this.generateEmbed()]});
+    async updateEmbed(interaction?: Interaction) {
+        // We have to reply to the correct interaction to make discord happy
+        if (interaction && interaction.isButton()) {
+            await interaction.update(this.generateMessage())
+        }
+        else if (this.message) {
+            await this.message.edit(this.generateMessage());
         }
     }
 
     /**
-     * An array of letters that have not yet been guessed
+     * An array of letters in the card that have not yet been guessed
      */
     get missing(): string[] {
         const letterArr: string[] = Array.from(this.letters.values());
@@ -141,10 +170,29 @@ class HangmanGame {
         return letterArr.filter(c => this.card.name.toLowerCase().indexOf(c) === -1).length + this.wrongGuesses;
     }
 
+    getButtons(): MessageActionRow[] {
+        // Can only have up to 25 buttons
+        const options = _.difference(HangmanGame.ALPHABET, Array.from(this.letters)).slice(0, 25);
+        return _.chunk(options, 5).map(grp => {
+            return new MessageActionRow({
+                components: grp.map(letter => {
+                    return new MessageButton({
+                        // description: `Guess ${letter}`,
+                        // emoji: letter.charCodeAt(0) + 56709,
+                        label: letter,
+                        customId: letter,
+                        style: MessageButtonStyles.SECONDARY
+                        // default: letter === "a"
+                    })
+                })
+            })
+        })
+    }
+
     /**
      * Return a discord Embed derived from this game
      */
-    generateEmbed(): MessageEmbed {
+    generateMessage(): MessageOptions {
         const missing = this.missing;
         const wrong = this.wrong;
         let totalGuesses = this.letters.size + this.wrongGuesses;
@@ -198,7 +246,10 @@ class HangmanGame {
             embed.setColor(this.gameSuccess ? 0x00ff00 : 0xff0000);
         }
 
-        return embed;
+        return {
+            embeds: [embed],
+            components: this.getButtons()
+        };
     }
 }
 
@@ -213,7 +264,7 @@ export default class MtgHangman {
     @Slash("guess", {
         description: 'Outright guess the hangman magic card.'
     })
-    guess(
+    async guess(
         @SlashOption("card", {
             description: "Name of the card you believe is the answer to the hangman puzzle"
         })
@@ -224,11 +275,11 @@ export default class MtgHangman {
 
         if (id in this.runningGames) {
             const game = this.runningGames[id];
-            // The user can !hangman guess Some Card Name
-            game.handleGuess(guess, interaction);
+            // // The user can !hangman guess Some Card Name
+            await game.handleGuess(guess, interaction);
         } else {
             // Handle the case where we "!hangman guess" but no game has started
-            interaction.reply({
+            await interaction.reply({
                 embeds: [new MessageEmbed({
                     title: 'Error',
                     description: 'No hangman game is currently running in this server. Guess ignored.',
@@ -245,14 +296,14 @@ export default class MtgHangman {
         @SlashChoice("Easy", 'easy')
         @SlashChoice("Medium", 'medium')
         @SlashChoice("Hard", 'hard')
-        @SlashOption("difficulty", { description: "How difficult the hangman game should be" })
-        difficulty: string,
+        @SlashOption("difficulty", {description: "How difficult the hangman game should be"})
+            difficulty: string,
         interaction: CommandInteraction
     ) {
         // check for already running games
         const id = interaction.guildId || interaction.user.id;
         if (id in this.runningGames) {
-            interaction.reply({
+            await interaction.reply({
                 embeds: [new MessageEmbed({
                     title: 'Error',
                     description: 'You can only start one hangman game every ' + GAME_TIME / 60000 + ' minutes.',
@@ -264,8 +315,7 @@ export default class MtgHangman {
             let card: Scry.Card;
             try {
                 card = await Scry.Cards.random();
-            }
-            catch {
+            } catch {
                 await interaction.reply({
                     embeds: [new MessageEmbed({
                         title: 'Error',
@@ -282,25 +332,20 @@ export default class MtgHangman {
                 gameList: this.runningGames
             });
 
-                const embed = game.generateEmbed();
-                game.message = <Message>await interaction.reply({embeds: [embed], fetchReply: true});
-                await game.message.react('❓');
-            game.collector = game.message.createReactionCollector({
-                    filter: ({emoji}) => !!emoji.name && emoji.name.charCodeAt(0) === 55356 && emoji.name.charCodeAt(1) >= 56806 && emoji.name.charCodeAt(1) <= 56831,
-                    time: GAME_TIME
-                }).on('collect', (reaction: MessageReaction) => {
-                    // get emoji character (we only accept :regional_indicator_X: emojis)
-                if (reaction.emoji.name) {
-                    const char = String.fromCharCode(reaction.emoji.name.charCodeAt(1) - 56709);
-                    game.handleLetter(char);
-                }
-                }).on('end', (collected, reason) => {
-                    // If we cancelled the collector, the game state has already been updated
-                    // If the time ran out, however, we know that the game was lost
-                    if (reason === 'time')
-                        game.setDone(false);
-                });
-            }
+            const message = game.generateMessage();
+            game.message = <Message>await interaction.reply({...message, fetchReply: true});
+            game.collector = game.message.createMessageComponentCollector({
+                time: GAME_TIME
+            }).on('collect', async (interaction: ButtonInteraction) => {
+                // get emoji character (we only accept :regional_indicator_X: emojis)
+                await game.handleLetter(interaction);
+            }).on('end', (collected, reason) => {
+                // If we cancelled the collector, the game state has already been updated
+                // If the time ran out, however, we know that the game was lost
+                if (reason === 'time')
+                    game.setDone( false);
+            });
+        }
 
     }
 }

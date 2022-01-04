@@ -87,8 +87,10 @@ class HangmanGame {
     async handleLetter(interaction: ButtonInteraction) {
         // Letters is a set, which handles duplicates for us
         this.letters.add(interaction.customId);
-        await this.checkDone(interaction);
-        await this.updateEmbed(interaction);
+        const done = await this.checkDone(interaction);
+        if (!done) {
+            await this.updateEmbed(interaction);
+        }
     }
 
     /**
@@ -181,7 +183,8 @@ class HangmanGame {
                         // emoji: letter.charCodeAt(0) + 56709,
                         label: letter,
                         customId: letter,
-                        style: MessageButtonStyles.SECONDARY
+                        style: MessageButtonStyles.SECONDARY,
+                        disabled: this.done
                         // default: letter === "a"
                     })
                 })
@@ -221,8 +224,7 @@ class HangmanGame {
             `  |    ${wrong > 1 ? '|' : ' '}    \n` +
             `  |   ${wrong > 4 ? '/' : ' '} ${wrong > 5 ? '\\' : ' '}   \n` +
             ' _|________\n```\n' +
-            'Use :regional_indicator_a::regional_indicator_b::regional_indicator_c: ... :regional_indicator_z: ' +
-            'reactions to pick letters.';
+            'Use the buttons below to guess letters.';
 
         // instantiate embed object
         const embed = new MessageEmbed({

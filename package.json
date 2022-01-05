@@ -9,8 +9,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "dev": "node --loader ts-node/esm server.ts",
-    "start": "nodemon --exec node --loader ts-node/esm/transpile-only server.ts",
+    "watch": "tsc --watch",
     "serve": "node server.js"
   },
   "repository": {

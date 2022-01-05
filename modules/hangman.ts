@@ -216,7 +216,8 @@ class HangmanGame {
             description += '**' + this.card.type_line + '**\n';
         }
 
-        description += '```\n' +
+        description +=
+            '```\n' +
             '   ____     \n' +
             `  |    |    Missing: ${missing.length} letter(s)\n` +
             `  |    ${wrong > 0 ? 'o' : ' '}    Guessed: ${letterArr.join('').toUpperCase()}\n` +

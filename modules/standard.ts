@@ -41,10 +41,15 @@ export default class Standard {
     generateEmbed(setList: WhatsInStandard): MessageEmbed {
         const currentDate = new Date();
         const removedFutureAndPastSetList = setList.sets.filter((set) => {
-            return currentDate.getTime() >= new Date(set.enterDate.exact).getTime() &&
-                (set.exitDate === null || currentDate.getTime() < new Date(set.exitDate.exact).getTime());
+            // A set is in standard if:
+            // It has been released, and
+            return set.enterDate.exact !== null &&
+                // It was released before today, and
+                currentDate.getTime() >= new Date(set.enterDate.exact).getTime() &&
+                // The exit date is unknown, or in the future
+                (set.exitDate.exact === null || currentDate.getTime() < new Date(set.exitDate.exact).getTime());
         });
-        const groupedSetList = _.groupBy(removedFutureAndPastSetList, "rough_exit_date");
+        const groupedSetList = _.groupBy(removedFutureAndPastSetList, set => set.exitDate.rough);
         const descriptions: string[] = [];
         _.forEach(groupedSetList, (value, key) => {
             descriptions.push("*Rotates ", key, ":*```", value.map(set => set.name).join(" | "), "```\n");

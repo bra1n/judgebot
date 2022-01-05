@@ -41,6 +41,8 @@ interface HangmanGameProps {
 
 class HangmanGame {
     static ALPHABET = [...'abcdefghijklmnopqrstuvwxyz'];
+    // This is A-Z in emoji symbols
+    static EMOJI_ALPHABET = new Set(Array(26).fill("🇦").map((str: string, i) => String.fromCharCode(str.charCodeAt(0) + i) ))
     // ({
     //     value: letter,
     //     description: `Guess ${letter}`,
@@ -75,10 +77,15 @@ class HangmanGame {
         this.card = card;
         this.difficulty = difficulty;
 
+        // Letters that have been guessed
         this.letters = new Set();
         this.wrongGuesses = 0;
         this.done = false;
         this.gameSuccess = false;
+    }
+
+    static letterToEmoji(letter: string): string{
+        return String.fromCodePoint((letter.toLowerCase().codePointAt(0) as number) + ("🇦".codePointAt(0) as number) - ("a".codePointAt(0) as number))
     }
 
     /**
@@ -173,19 +180,33 @@ class HangmanGame {
     }
 
     getButtons(): MessageActionRow[] {
+        if (this.done){
+            return []
+        }
+        // We can only show 25 characters at a time, so hide q or the first letter we guessed
+        const alphabet = new Set(HangmanGame.ALPHABET);
+        if (this.letters.size == 0){
+            alphabet.delete("q")
+        }
+        else {
+            for (let letter of this.letters){
+                alphabet.delete(letter);
+                break;
+            }
+        }
         // Can only have up to 25 buttons
-        const options = _.difference(HangmanGame.ALPHABET, Array.from(this.letters)).slice(0, 25);
-        return _.chunk(options, 5).map(grp => {
+        // const options = _.difference(HangmanGame.ALPHABET, Array.from(this.letters)).slice(0, 25);
+        return _.chunk(Array.from(alphabet), 5).map(grp => {
             return new MessageActionRow({
                 components: grp.map(letter => {
                     return new MessageButton({
                         // description: `Guess ${letter}`,
                         // emoji: letter.charCodeAt(0) + 56709,
-                        label: letter,
+                        label: HangmanGame.letterToEmoji(letter),
                         customId: letter,
                         style: MessageButtonStyles.SECONDARY,
-                        disabled: this.done
-                        // default: letter === "a"
+                        // Disable it if it has been guessed
+                        disabled: this.letters.has(letter)
                     })
                 })
             })
@@ -225,7 +246,7 @@ class HangmanGame {
             `  |    ${wrong > 1 ? '|' : ' '}    \n` +
             `  |   ${wrong > 4 ? '/' : ' '} ${wrong > 5 ? '\\' : ' '}   \n` +
             ' _|________\n```\n' +
-            'Use the buttons below to guess letters.';
+            'Use the buttons below to guess letters, or use `/solve` to guess outright.';
 
         // instantiate embed object
         const embed = new MessageEmbed({
@@ -264,10 +285,10 @@ export default class MtgHangman {
         this.runningGames = {};
     }
 
-    @Slash("guess", {
+    @Slash("solve", {
         description: 'Outright guess the hangman magic card.'
     })
-    async guess(
+    async solve(
         @SlashOption("card", {
             description: "Name of the card you believe is the answer to the hangman puzzle"
         })

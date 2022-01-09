@@ -433,7 +433,7 @@ export default class MtgCardLoader {
         if (cards.length > 0) {
             // generate embed
             const msg = await this.generateResponse(cards, command, permission);
-            const sentMessage = <Message>await interaction.reply({
+            const sentMessage = await interaction.reply({
                 ...msg,
                 fetchReply: true
             });
@@ -457,12 +457,14 @@ export default class MtgCardLoader {
                 }
             }
 
-            sentMessage.createMessageComponentCollector({
-                    componentType: "BUTTON",
-                    time: 60000,
-                    max: 20
-                }
-            ).on('collect', handleReaction).on('remove', handleReaction);
+            if (sentMessage instanceof Message) {
+                sentMessage.createMessageComponentCollector({
+                        componentType: "BUTTON",
+                        time: 60000,
+                        max: 20
+                    }
+                ).on('collect', handleReaction).on('remove', handleReaction);
+            }
         } else {
             let description = 'No cards matched `' + cardName + '`.';
             // if (err.statusCode === 503) {

@@ -4,6 +4,7 @@ import * as utils from "../utils.js";
 import {CommandInteraction, MessageEmbed, MessageInteraction} from "discord.js";
 import {Discord, Slash, SlashOption} from "discordx";
 import fetch from "node-fetch";
+import {JSDOM} from 'jsdom';
 
 const log = utils.getLogger('mtr');
 const MTR_ADDRESS = process.env.MTR_ADDRESS || 'https://raw.githubusercontent.com/AEFeinstein/GathererScraper/master/rules/MagicTournamentRules-light.html';
@@ -47,8 +48,21 @@ export default class MTR {
      * Sets up the MTR data
      */
     async init(){
-        const mtrDocument = await this.download(MTR_ADDRESS);
-        await this.parse(mtrDocument);
+        const res = await fetch(MTR.location);
+        const html = await res.text();
+        // const dom = new JSDOM(html);
+        const $ = cheerio.load(html);
+        await this.parseSections($);
+    }
+
+    async parseSections($: cheerio.Root){
+        const chapters = [];
+        const section = [];
+
+        for (let chapter of $("h2")){
+            const sections = $(chapter).next("p");
+
+        }
     }
 
     /**
@@ -68,10 +82,11 @@ export default class MTR {
      * Parses the MTR data and updates class state
      */
     parse(mtrDocument: string) {
-        const $ = cheerio.load(mtrDocument);
-        this.cleanup($);
-        this.handleChapters($);
-        this.handleSections($);
+
+        // const $ = cheerio.load(mtrDocument);
+        // this.cleanup($);
+        // this.handleChapters($);
+        // this.handleSections($);
         log.info('MTR Ready');
     }
 

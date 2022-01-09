@@ -20,7 +20,8 @@ const bot = new Client({
         Intents.FLAGS.DIRECT_MESSAGE_REACTIONS,
         Intents.FLAGS.GUILD_MESSAGES,
         Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
-        Intents.FLAGS.GUILDS
+        Intents.FLAGS.GUILDS,
+        Intents.FLAGS.
     ],
     botGuilds: process.env.DEV_GUILD ? [process.env?.DEV_GUILD] : undefined
 });

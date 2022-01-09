@@ -21,8 +21,8 @@ const bot = new Client({
         Intents.FLAGS.GUILD_MESSAGES,
         Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
         Intents.FLAGS.GUILDS,
-        Intents.FLAGS.
     ],
+    partials: [ "MESSAGE", "CHANNEL", "REACTION" ],
     botGuilds: process.env.DEV_GUILD ? [process.env?.DEV_GUILD] : undefined
 });
 bot.on("interactionCreate", (interaction: Interaction) => {

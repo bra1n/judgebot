@@ -348,18 +348,22 @@ export default class MtgCardLoader {
             embed.setDescription(this.parseGathererRulings(gatherer));
         }
 
-        const components: MessageActionRowComponentResolvable[] = [
-            new MessageButton({
-                label: '⬅',
-                style: MessageButtonStyles.SECONDARY,
-                customId: 'left'
-            }),
-            new MessageButton({
-                label: '➡',
-                style: MessageButtonStyles.SECONDARY,
-                customId: 'right'
-            })
-        ];
+        const components: MessageActionRowComponentResolvable[] = [];
+        if (cards.length > 1) {
+            components.push(
+                new MessageButton({
+                    label: '⬅',
+                    style: MessageButtonStyles.SECONDARY,
+                    customId: 'left'
+                }));
+            components.push(
+                new MessageButton({
+                    label: '➡',
+                    style: MessageButtonStyles.SECONDARY,
+                    customId: 'right'
+                })
+            );
+        }
 
         // add reactions for zoom
         if (command !== "art") {
@@ -390,7 +394,14 @@ export default class MtgCardLoader {
             return cards.sort((a, b) => this.scoreHit(b, cardName) - this.scoreHit(a, cardName));
         } else {
             log.info('Falling back to fuzzy search for ' + cardName);
-            return [await Scry.Cards.byName(cardName, true)];
+            // Specific handling for https://github.com/ChiriVulpes/scryfall-sdk/issues/45
+            let fuzzy = await Scry.Cards.byName(cardName, true);
+            if ('name' in fuzzy) {
+                return [fuzzy];
+            }
+            else {
+                return [];
+            }
         }
     }
 
@@ -440,7 +451,7 @@ export default class MtgCardLoader {
 
             const handleReaction = async (buttonReaction: ButtonInteraction) => {
                 await buttonReaction.deferUpdate();
-                if (buttonReaction.user.id === interaction.user.id){
+                if (buttonReaction.user.id === interaction.user.id) {
                     // Only allow the person who ran this command to control the embed
                     // We can't use the filter() on the collector because the discord will hate us
                     if (buttonReaction.customId === 'left') {

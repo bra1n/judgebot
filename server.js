@@ -7,6 +7,8 @@ log.info(`booting up...`);
 
 require('dotenv').config()
 
+log.info("Token: " + process.env.DISCORD_TOKEN);
+
 // basic server stuff, modules to load
 const commandChar = process.env.COMMAND_CHAR || "!";
 const spamTimeout = 3000; // milliseconds

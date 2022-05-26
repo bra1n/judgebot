@@ -5,7 +5,7 @@ const utils = require("../../utils");
 const log = utils.getLogger('cr');
 const Discord = require('discord.js');
 
-const CR_ADDRESS = process.env.CR_ADDRESS || "http://cr.vensersjournal.com";
+const CR_ADDRESS = process.env.CR_ADDRESS || "https://api.academyruins.com/link/cr"
 
 class CR {
     constructor() {

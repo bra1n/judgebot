@@ -1,7 +1,7 @@
 import _ from "lodash";
 import cheerio from "cheerio";
 import * as utils from "../utils.js";
-import {CommandInteraction, MessageEmbed, MessageInteraction} from "discord.js";
+import {CommandInteraction, EmbedBuilder, MessageInteraction} from "discord.js";
 import {Discord, Slash, SlashOption} from "discordx";
 import fetch from "node-fetch";
 
@@ -156,9 +156,9 @@ export default class MTR {
         }
     }
 
-    formatChapter(chapter: Chapter): MessageEmbed {
+    formatChapter(chapter: Chapter): EmbedBuilder {
         const availableSections = chapter.sections.map((s) => '• '+this.mtrData.sections[s].title).join('\n');
-        return new MessageEmbed({
+        return new EmbedBuilder({
             title: `MTR - ${chapter.title}`,
             description: availableSections,
             thumbnail: {url: MTR.thumbnail},
@@ -166,8 +166,8 @@ export default class MTR {
         });
     }
 
-    formatSection(section: Section): MessageEmbed {
-        return new MessageEmbed({
+    formatSection(section: Section): EmbedBuilder {
+        return new EmbedBuilder({
             title: `MTR - ${section.title}`,
             description: _.truncate(section.content, {length: MTR.maxLength, separator: '\n'}),
             thumbnail: {url: MTR.thumbnail},
@@ -175,14 +175,14 @@ export default class MTR {
         });
     }
 
-    find(parameter: string): MessageEmbed {
+    find(parameter: string): EmbedBuilder {
         if (parameter.indexOf('-') !== -1 || parameter.indexOf('.') !== -1) {
             // looks like a section query
             const section = this.mtrData.sections[parameter];
             if (section) {
                 return this.formatSection(section);
             }
-            return new MessageEmbed({
+            return new EmbedBuilder({
                 title: 'MTR - Error',
                 description: 'This section does not exist. Try asking for a chapter to get a list of available sections for that chapter.',
                 color: 0xff0000
@@ -193,18 +193,20 @@ export default class MTR {
         if (chapter) {
             return this.formatChapter(chapter);
         }
-        return new MessageEmbed({
+        return new EmbedBuilder({
             title: 'MTR - Error',
             description: 'This chapter does not exist.',
             color: 0xff0000
-        }).addField('Available Chapters', _.values(this.mtrData.chapters).map((c) => '• '+c.title).join('\n'));
+        }).addFields({ name: 'Available Chapters', value: _.values(this.mtrData.chapters).map((c) => '• '+c.title).join('\n')});
     }
 
-    @Slash("mtr", {
+    @Slash({
+        name: "mtr", 
         description: "Show an entry from Magic: The Gathering Tournament Rules"
     })
     async mtr(
-        @SlashOption("lookup", {
+        @SlashOption({
+            name: "lookup", 
             description: "Section of the MTR to look up",
             required: false
         })
@@ -218,12 +220,12 @@ export default class MTR {
         }
         else {
             return interaction.reply({
-                embeds: [new MessageEmbed({
+                embeds: [new EmbedBuilder({
                     title: 'Magic Tournament Rules',
                     description: this.mtrData.description,
                     thumbnail: {url: MTR.thumbnail},
                     url: MTR.location
-                }).addField('Available Chapters', _.values(this.mtrData.chapters).map((c) => '• ' + c.title).join("\n"))
+                }).addFields({name: 'Available Chapters', value:_.values(this.mtrData.chapters).map((c) => '• ' + c.title).join("\n")})
                 ]
             });
         }

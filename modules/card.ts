@@ -1,33 +1,40 @@
 import {
     ButtonInteraction,
     CommandInteraction,
-    Message, MessageActionRow,
+    Message,
     MessageActionRowComponentResolvable,
-    MessageButton,
-    MessageEmbed, MessageOptions,
-    MessageReaction
+    MessageOptions,
+    MessageReaction,
+    ButtonBuilder,
+    MessageComponentBuilder,
+    ComponentType,
+    ApplicationCommandOptionType,
+    ApplicationCommandOptionBase,
+    ButtonStyle,
+    ActionRowBuilder,
+    AnyComponentBuilder,
+    EmbedBuilder
+
 } from "discord.js";
-import {Discord, Slash, SlashOption, SlashOptionParams} from "discordx";
+import { Discord, Slash, SlashOption, SlashOptionOptions } from "discordx";
 import * as cheerio from "cheerio";
 import fetch from 'node-fetch';
 import _ from "lodash";
 import * as utils from "../utils.js";
 import * as Scry from "scryfall-sdk";
-import {MessageButtonStyles} from "discord.js/typings/enums";
 
 const log = utils.getLogger('card');
 
-const scryfallSearchOption: SlashOptionParams = {
-    type: "STRING",
+const scryfallSearchOption: {
+    type: ApplicationCommandOptionType.String,
+    description: string
+} = {
+    type: ApplicationCommandOptionType.String,
     description: "Scryfall search term",
 };
 
 interface JudgebotCard extends Scry.Card {
     zoom?: boolean;
-}
-
-enum CardMode {
-
 }
 
 @Discord()
@@ -112,12 +119,13 @@ export default class MtgCardLoader {
         "NONE": 0xDAD9DE
     };
 
-    @Slash("card", {
+    @Slash({
+        name: "card",
         description: `Search for an English Magic card by (partial) name, supports full Scryfall syntax`,
     })
     async card(
-        @SlashOption("search", scryfallSearchOption)
-            search: string,
+        @SlashOption({ name: "search", ...scryfallSearchOption })
+        search: string,
         interaction: CommandInteraction
     ) {
         await this.handleInteraction(
@@ -127,12 +135,13 @@ export default class MtgCardLoader {
         )
     }
 
-    @Slash("price", {
+    @Slash({
+        name: "price",
         description: "Show the price in USD, EUR and TIX for a card"
     })
     async price(
-        @SlashOption("search", scryfallSearchOption)
-            search: string,
+        @SlashOption({ name: "search", ...scryfallSearchOption })
+        search: string,
         interaction: CommandInteraction
     ) {
         await this.handleInteraction(
@@ -142,12 +151,13 @@ export default class MtgCardLoader {
         )
     }
 
-    @Slash("ruling", {
+    @Slash({
+        name: "ruling",
         description: "Show the Gatherer rulings for a card"
     })
     async ruling(
-        @SlashOption("search", scryfallSearchOption)
-            search: string,
+        @SlashOption({ name: "search", ...scryfallSearchOption })
+        search: string,
         interaction: CommandInteraction
     ) {
         await this.handleInteraction(
@@ -157,12 +167,13 @@ export default class MtgCardLoader {
         )
     }
 
-    @Slash("legal", {
+    @Slash({
+        name: "legal",
         description: "Show the format legality for a card",
     })
     async legal(
-        @SlashOption("search", scryfallSearchOption)
-            search: string,
+        @SlashOption({ name: "search", ...scryfallSearchOption })
+        search: string,
         interaction: CommandInteraction
     ) {
         await this.handleInteraction(
@@ -172,12 +183,13 @@ export default class MtgCardLoader {
         )
     }
 
-    @Slash("art", {
+    @Slash({
+        name: "art",
         description: "Show just the art for a card"
     })
     async art(
-        @SlashOption("search", scryfallSearchOption)
-            search: string,
+        @SlashOption({ name: "search", ...scryfallSearchOption })
+        search: string,
         interaction: CommandInteraction
     ) {
         await this.handleInteraction(
@@ -196,7 +208,7 @@ export default class MtgCardLoader {
     }
 
     // determine embed border color
-    getBorderColor(card: Scry.Card) {
+    getBorderColor(card: Scry.Card | Scry.CardFace) {
         let color;
         if (!card.colors || card.colors.length === 0) {
             color = MtgCardLoader.colors.NONE;
@@ -210,62 +222,41 @@ export default class MtgCardLoader {
         return color;
     }
 
-    // parse Gatherer rulings
-    parseGathererRulings(gatherer: string) {
-        const $ = cheerio.load(gatherer);
-        const rulings: string[] = [];
-        $('.rulingsTable tr').each((index: number, elem: cheerio.Element) => {
-            rulings.push('**' + $(elem).find('td:nth-child(1)').text() + ':** ' + $(elem).find('td:nth-child(2)').text());
-            if (rulings.join('\n').length > 2040) {
-                rulings[rulings.length - 1] = '...';
-                return false;
-            }
-        });
-        return rulings.join('\n');
-    }
-
     // generate description text from a card object
     generateDescriptionText(card: Scry.Card) {
         const ptToString = (card: Scry.CardFace | Scry.Card) => `**${card.power?.replace(/\*/g, '\\*')}/${card.toughness?.replace(/\*/g, '\\*')}**`;
 
-        const description = [];
-        if (card.type_line) { // bold type line
-            let type = `**${card.printed_type_line || card.type_line}** `;
-            type += `(${card.set.toUpperCase()} ${_.capitalize(card.rarity)}`;
-            type += `${card.lang && card.lang !== 'en' ? ' :flag_' + card.lang + ':' : ''})`;
-            description.push(type);
-        }
-        if (card.oracle_text) { // reminder text in italics
-            const text = card.printed_text || card.oracle_text;
-            description.push(text.replace(/[()]/g, (m: string) => m === '(' ? '*(' : ')*'));
-        }
-        if (card.flavor_text) { // flavor text in italics
-            description.push('*' + card.flavor_text + '*');
-        }
-        if (card.loyalty) { // bold loyalty
-            description.push('**Loyalty: ' + card.loyalty + '**');
-        }
-        if (card.power) { // bold P/T
-            description.push(ptToString(card));
-        }
-        if (card.card_faces) {
-            // split cards are special
-            card.card_faces.forEach((face: Scry.CardFace) => {
-                description.push('**' + face.type_line + '**');
-                if (face.oracle_text) {
-                    description.push(face.oracle_text.replace(/[()]/g, (m: string) => m === '(' ? '*(' : ')*'));
+        const description: string[] = [];
+
+        card.card_faces.forEach((face: Scry.CardFace, index) => {
+            if (face.type_line) { // bold type line
+                let type = `**${face.printed_type_line || face.type_line}** `;
+                if (index == 0){
+                    // Only show rarity, language etc for first face
+                    type += `(${card.set.toUpperCase()} ${_.capitalize(card.rarity)}`;
+                    type += `${card.lang && card.lang !== 'en' ? ' :flag_' + card.lang + ':' : ''})`;
                 }
-                if (face.power) {
-                    description.push(ptToString(face));
-                }
-                description.push('');
-            });
-        }
+                description.push(type);
+            }
+            if (face.oracle_text) { // reminder text in italics
+                const text = face.printed_text || face.oracle_text;
+                description.push(text.replace(/[()]/g, (m: string) => m === '(' ? '*(' : ')*'));
+            }
+            if (face.flavor_text) { // flavor text in italics
+                description.push('*' + face.flavor_text + '*');
+            }
+            if (face.loyalty) { // bold loyalty
+                description.push('**Loyalty: ' + face.loyalty + '**');
+            }
+            if (face.power) { // bold P/T
+                description.push(ptToString(face));
+            }
+        });
         return description.join('\n');
     }
 
     // generate the embed card
-    async generateResponse(cards: JudgebotCard[], command: string, hasEmojiPermission: boolean): Promise<MessageOptions> {
+    async generateResponse(cards: JudgebotCard[], command: string, hasEmojiPermission: boolean) {
         const card = cards[0];
 
         // generate embed title and description text
@@ -294,12 +285,12 @@ export default class MtgCardLoader {
 
         // are we allowed to use custom emojis? cool, then do so, but make sure the title still fits
         if (hasEmojiPermission) {
-            title = _.truncate(this.renderEmojis(title), {length: 256, separator: '<'});
+            title = _.truncate(this.renderEmojis(title), { length: 256, separator: '<' });
             description = this.renderEmojis(description);
         }
 
         // footer
-        let footer = "Use !help to get a list of available commands.";
+        let footer = "";
         if (cards.length > 1) {
             footer = (cards.length - 1) + ' other hits:\n';
             footer += cards.slice(1, 6).map((cardObj: JudgebotCard) => cardObj.printed_name || cardObj.name).join('; ');
@@ -307,80 +298,76 @@ export default class MtgCardLoader {
         }
 
         // instantiate embed object
-        const embed = new MessageEmbed({
+        const embed = new EmbedBuilder({
             title,
             description,
-            footer: {text: footer},
+            footer: { text: footer },
             url: card.scryfall_uri,
-            // @ts-ignore: https://github.com/ChiriVulpes/scryfall-sdk/pull/42
             color: this.getBorderColor(card.layout === 'transform' || card.layout === 'modal_dfc' ? card.card_faces[0] : card),
-            thumbnail: card.image_uris ? {url: card.image_uris.small} : undefined,
-            image: card.zoom && card.image_uris ? {url: card.image_uris.normal} : undefined
-        });
-
+            thumbnail: card.image_uris ? { url: card.image_uris.small } : undefined,
+            image: card.zoom && card.image_uris ? { url: card.image_uris.normal } : undefined
+        })
         // show crop art only
         if (command.match(/^art/) && card.image_uris) {
             embed.setImage(card.image_uris.art_crop);
+            embed.setThumbnail(null);
             embed.setDescription('🖌️ ' + card.artist);
+        }
+
+        // Remove thumbnail if we zoom
+        if (card.zoom) {
+            embed.setThumbnail(null);
         }
 
         // add pricing, if requested
         if (command.match(/^price/) && card.prices) {
+            embed.setDescription(null);
             let prices = [];
             if (card.prices.usd) prices.push('$' + card.prices.usd);
             if (card.prices.usd_foil) prices.push('**Foil** $' + card.prices.usd_foil);
             if (card.prices.eur) prices.push(card.prices.eur + '€');
             if (card.prices.tix) prices.push(card.prices.tix + ' Tix');
-            embed.addField('Prices', prices.join(' / ') || 'No prices found');
+            embed.addFields({
+                name: "Prices",
+                value: prices.join(' / ') || 'No prices found'
+            });
         }
 
         // add legalities, if requested
         if (command.match(/^legal/)) {
             const legalities = (_.invertBy(card.legalities).legal || []).map(_.capitalize).join(', ');
-            embed.addField('Legal in', legalities || 'Nowhere');
+            embed.addFields({ name: 'Legal in', value: legalities || 'Nowhere' });
         }
 
         // add rulings loaded from Gatherer, if needed
         if (command.match(/^ruling/) && card.related_uris.gatherer) {
-            const res = await fetch(card.related_uris.gatherer);
-            const gatherer = await res.text();
-            embed.setAuthor('Gatherer rulings for');
-            embed.setDescription(this.parseGathererRulings(gatherer));
+            const rulings = card.getRulings();
+            embed.setAuthor({ name: 'Gatherer rulings for' });
+            embed.setDescription((await rulings).map(ruling => "• " + ruling.comment).join("\n"));
         }
 
-        const components: MessageActionRowComponentResolvable[] = [];
+        const components: ButtonBuilder[] = [];
         if (cards.length > 1) {
             components.push(
-                new MessageButton({
-                    label: '⬅',
-                    style: MessageButtonStyles.SECONDARY,
-                    customId: 'left'
-                }));
+                new ButtonBuilder().setLabel('⬅').setStyle(ButtonStyle.Secondary).setCustomId("left")
+            )
             components.push(
-                new MessageButton({
-                    label: '➡',
-                    style: MessageButtonStyles.SECONDARY,
-                    customId: 'right'
-                })
+                new ButtonBuilder().setLabel('➡').setStyle(ButtonStyle.Secondary).setCustomId("right")
             );
         }
 
         // add reactions for zoom
         if (command !== "art") {
-            components.push(new MessageButton({
-                label: "🔍",
-                style: MessageButtonStyles.SECONDARY,
-                customId: 'zoom'
-            }))
+            components.push(new ButtonBuilder().setLabel("🔍").setStyle(ButtonStyle.Secondary).setCustomId('zoom'))
         }
 
         return {
             embeds: [embed],
-            components: [
-                new MessageActionRow({
-                    components: components
-                })
-            ]
+            components: components.length > 0 ? [
+                new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    components
+                )
+            ] : undefined
         }
     }
 
@@ -388,7 +375,7 @@ export default class MtgCardLoader {
      * Fetch the cards from Scryfall
      */
     async getCards(cardName: string): Promise<Scry.Card[]> {
-        let cards = await Scry.Cards.search(cardName, {include_extras: true}).cancelAfterPage().waitForAll();
+        let cards = await Scry.Cards.search(cardName, { include_extras: true }).cancelAfterPage().waitForAll();
         if (cards.length > 0) {
             // sort the cards to better match the search query (issue #87)
             return cards.sort((a, b) => this.scoreHit(b, cardName) - this.scoreHit(a, cardName));
@@ -434,6 +421,7 @@ export default class MtgCardLoader {
      * @param interaction The interaction to respond to
      */
     async handleInteraction(command: string, parameter: string, interaction: CommandInteraction) {
+        await interaction.deferReply();
         const cardName = parameter.toLowerCase();
         // no card name, no lookup
         if (!cardName) return;
@@ -444,9 +432,8 @@ export default class MtgCardLoader {
         if (cards.length > 0) {
             // generate embed
             const msg = await this.generateResponse(cards, command, permission);
-            const sentMessage = await interaction.reply({
+            const sentMessage = await interaction.editReply({
                 ...msg,
-                fetchReply: true
             });
 
             const handleReaction = async (buttonReaction: ButtonInteraction) => {
@@ -470,23 +457,16 @@ export default class MtgCardLoader {
 
             if (sentMessage instanceof Message) {
                 sentMessage.createMessageComponentCollector({
-                        componentType: "BUTTON",
-                        time: 60000,
-                        max: 20
-                    }
+                    componentType: ComponentType.Button,
+                    time: 60000,
+                    max: 20
+                }
                 ).on('collect', handleReaction).on('remove', handleReaction);
             }
         } else {
             let description = 'No cards matched `' + cardName + '`.';
-            // if (err.statusCode === 503) {
-            //     description = 'Scryfall is currently offline, please try again later.'
-            // }
-            return interaction.reply({
-                embeds: [new MessageEmbed({
-                    title: 'Error',
-                    description,
-                    color: 0xff0000
-                })]
+            return interaction.editReply({
+                embeds: [new EmbedBuilder().setTitle('Error').setDescription(description).setColor(0xff0000)]
             });
         }
     }

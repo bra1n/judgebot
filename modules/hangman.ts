@@ -2,21 +2,19 @@ import _ from "lodash";
 import * as utils from "../utils.js";
 import MtgCardLoader from "./card.js";
 import {
-    BaseCommandInteraction,
+    ActionRowBuilder,
+    BaseInteraction,
+    ButtonBuilder,
     ButtonInteraction,
-    CommandInteraction, Interaction, InteractionCollector,
+    ButtonStyle,
+    CommandInteraction, EmbedBuilder, Interaction, InteractionCollector,
     Message,
-    MessageActionRow,
-    MessageButton,
-    MessageEmbed, MessageInteraction,
     MessageOptions,
     MessageReaction,
-    MessageSelectMenu,
-    ReactionCollector
+    ReactionCollector,
 } from "discord.js";
 import {Discord, Slash, SlashChoice, SlashOption} from "discordx";
 import * as Scry from "scryfall-sdk";
-import {MessageButtonStyles} from "discord.js/typings/enums";
 
 const log = utils.getLogger('hangman');
 const cardFetcher = new MtgCardLoader();
@@ -43,14 +41,6 @@ class HangmanGame {
     static ALPHABET = [...'abcdefghijklmnopqrstuvwxyz'];
     // This is A-Z in emoji symbols
     static EMOJI_ALPHABET = new Set(Array(26).fill("🇦").map((str: string, i) => String.fromCharCode(str.charCodeAt(0) + i) ))
-    // ({
-    //     value: letter,
-    //     description: `Guess ${letter}`,
-    //     // emoji: letter.charCodeAt(0) + 56709,
-    //     label: letter,
-    //     default: letter === "a"
-    // }));
-    //
     card: Scry.Card;
     collector: InteractionCollector<any> | null;
     difficulty: Difficulty;
@@ -121,7 +111,7 @@ class HangmanGame {
      * Checks if the game should finish
      * Returns true if we are now done.
      */
-    async checkDone(interaction?: Interaction): Promise<boolean> {
+    async checkDone(interaction?: BaseInteraction): Promise<boolean> {
         if (!this.missing.length) {
             await this.setDone(true, interaction);
             return true;
@@ -136,7 +126,7 @@ class HangmanGame {
     /**
      * Indicates that this game is finished
      */
-    async setDone(correct: boolean = false, interaction?: Interaction) {
+    async setDone(correct: boolean = false, interaction?: BaseInteraction) {
         this.done = true;
         this.gameSuccess = correct;
         await this.updateEmbed(interaction);
@@ -151,7 +141,7 @@ class HangmanGame {
     /**
      * Using the stored parameters, updates the embed for the specified game
      */
-    async updateEmbed(interaction?: Interaction) {
+    async updateEmbed(interaction?: BaseInteraction) {
         // We have to reply to the correct interaction to make discord happy
         if (interaction && interaction.isButton()) {
             await interaction.update(this.generateMessage())
@@ -179,7 +169,7 @@ class HangmanGame {
         return letterArr.filter(c => this.card.name.toLowerCase().indexOf(c) === -1).length + this.wrongGuesses;
     }
 
-    getButtons(): MessageActionRow[] {
+    getButtons(): ActionRowBuilder<ButtonBuilder>[] {
         if (this.done){
             return []
         }
@@ -197,26 +187,22 @@ class HangmanGame {
         // Can only have up to 25 buttons
         // const options = _.difference(HangmanGame.ALPHABET, Array.from(this.letters)).slice(0, 25);
         return _.chunk(Array.from(alphabet), 5).map(grp => {
-            return new MessageActionRow({
-                components: grp.map(letter => {
-                    return new MessageButton({
-                        // description: `Guess ${letter}`,
-                        // emoji: letter.charCodeAt(0) + 56709,
-                        label: HangmanGame.letterToEmoji(letter),
-                        customId: letter,
-                        style: MessageButtonStyles.SECONDARY,
-                        // Disable it if it has been guessed
-                        disabled: this.letters.has(letter)
-                    })
-                })
-            })
-        })
-    }
+            return new ActionRowBuilder<ButtonBuilder>().addComponents(
+                grp.map(letter => new ButtonBuilder().setLabel(
+HangmanGame.letterToEmoji(letter),
+                ).setCustomId(letter).setStyle(ButtonStyle.Secondary).setDisabled(
+// Disable it if it has been guessed
+this.letters.has(letter)
+                )
+           )
+        )
+    })
+}
 
     /**
      * Return a discord Embed derived from this game
      */
-    generateMessage(): MessageOptions {
+    generateMessage() {
         const missing = this.missing;
         const wrong = this.wrong;
         let totalGuesses = this.letters.size + this.wrongGuesses;
@@ -249,8 +235,7 @@ class HangmanGame {
             'Use the buttons below to guess letters, or use `/solve` to guess outright.';
 
         // instantiate embed object
-        const embed = new MessageEmbed({
-            author: {name: 'Guess the card:'},
+        const embed = new EmbedBuilder({
             title,
             description,
             footer: {text: 'You have ' + GAME_TIME / 60000 + ' minutes to guess the card.'}
@@ -259,7 +244,7 @@ class HangmanGame {
         // game is over
         if (this.done) {
             embed.setTitle(this.card.name);
-            embed.setFooter(this.gameSuccess ? 'You guessed the card!' : 'You failed to guess the card!');
+            embed.setFooter({text: this.gameSuccess ? 'You guessed the card!' : 'You failed to guess the card!'});
             embed.setURL(this.card.scryfall_uri);
             // @ts-ignore https://github.com/ChiriVulpes/scryfall-sdk/pull/42
             if ((this.card.layout === 'transform' || this.card.layout === 'modal_dfc') && this.card.card_faces && this.card.card_faces[0].image_uris) {
@@ -285,11 +270,13 @@ export default class MtgHangman {
         this.runningGames = {};
     }
 
-    @Slash("solve", {
+    @Slash({
+        name: "solve",
         description: 'Outright guess the hangman magic card.'
     })
     async solve(
-        @SlashOption("card", {
+        @SlashOption({
+            name: "card",
             description: "Name of the card you believe is the answer to the hangman puzzle"
         })
             guess: string,
@@ -304,23 +291,20 @@ export default class MtgHangman {
         } else {
             // Handle the case where we "!hangman guess" but no game has started
             await interaction.reply({
-                embeds: [new MessageEmbed({
-                    title: 'Error',
-                    description: 'No hangman game is currently running in this server. Guess ignored.',
-                    color: 0xff0000
-                })]
+                embeds: [new EmbedBuilder().setTitle('Error').setDescription('No hangman game is currently running in this server. Guess ignored.').setColor(0xff0000)]
             });
         }
     }
 
-    @Slash("hangman", {
+    @Slash({
+        name: "hangman", 
         description: 'Start a game of hangman, where you have to guess the card name with reaction letters'
     })
     async hangman(
         @SlashChoice("Easy", 'easy')
         @SlashChoice("Medium", 'medium')
         @SlashChoice("Hard", 'hard')
-        @SlashOption("difficulty", {description: "How difficult the hangman game should be"})
+        @SlashOption({name: "difficulty", description: "How difficult the hangman game should be"})
             difficulty: string,
         interaction: CommandInteraction
     ) {
@@ -328,11 +312,7 @@ export default class MtgHangman {
         const id = interaction.guildId || interaction.user.id;
         if (id in this.runningGames) {
             await interaction.reply({
-                embeds: [new MessageEmbed({
-                    title: 'Error',
-                    description: 'You can only start one hangman game every ' + GAME_TIME / 60000 + ' minutes.',
-                    color: 0xff0000
-                })]
+                embeds: [new EmbedBuilder().setTitle('Error').setDescription('You can only start one hangman game every ' + GAME_TIME / 60000 + ' minutes.').setColor( 0xff0000 )]
             });
         } else {
             // Create the new game
@@ -341,11 +321,8 @@ export default class MtgHangman {
                 card = await Scry.Cards.random();
             } catch {
                 await interaction.reply({
-                    embeds: [new MessageEmbed({
-                        title: 'Error',
-                        description: 'Scryfall is currently offline and can\'t generate us a random card, please try again later.',
-                        color: 0xff0000
-                    })]
+                    embeds: [new EmbedBuilder().setTitle('Error').setDescription('Scryfall is currently offline and can\'t generate us a random card, please try again later.').setColor(0xff0000)
+                    ]
                 });
                 return;
             }

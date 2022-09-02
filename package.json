@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
-    "serve": "node server.js"
+    "serve": "npm run build && node server.js"
   },
   "repository": {
     "type": "git",

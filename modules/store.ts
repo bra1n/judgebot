@@ -3,8 +3,8 @@ import Fuse from "fuse.js";
 const log = utils.getLogger('locator');
 import fetch from 'node-fetch';
 import * as utils from "../utils.js";
-import {MessageEmbed, MessageOptions, MessageAttachment, CommandInteraction} from "discord.js";
-import {Discord, Slash, SlashChoice, SlashOption, SlashOptionParams} from "discordx";
+import { MessageOptions, CommandInteraction, AttachmentBuilder, EmbedBuilder, InteractionReplyOptions } from "discord.js";
+import { Discord, Slash, SlashChoice, SlashOption, SlashOptionOptions } from "discordx";
 
 @Discord()
 export default class StoreLocator {
@@ -81,7 +81,7 @@ export default class StoreLocator {
         "CAS": "Casual Multiplayer - Other"
     }
     stores: any[];
-    storeSearch: Fuse<any, any> | null;
+    storeSearch: Fuse<any> | null;
 
     constructor() {
         this.stores = [];
@@ -106,9 +106,7 @@ export default class StoreLocator {
                 this.storeSearch = new Fuse(this.stores, {
                     shouldSort: true,
                     threshold: 0.5,
-                    matchAllTokens: true,
                     minMatchCharLength: 3,
-                    tokenize: true,
                     keys: [{
                         name: 'Organization.Name',
                         weight: 0.7
@@ -126,24 +124,24 @@ export default class StoreLocator {
                 method: 'POST',
                 body: JSON.stringify(this.generateStoreRequestBody({
                     location: {},
-                    bounds: {northeast: {lat: 85, lng: longitude + distance}, southwest: {lat: -85, lng: longitude}}
+                    bounds: { northeast: { lat: 85, lng: longitude + distance }, southwest: { lat: -85, lng: longitude } }
                 }, 5000)),
             });
             const body: any = await res.json();
             let count = 0;
             if (body.d.Results) {
                 body.d.Results.forEach(({
-                                            Address,
-                                            Organization,
-                                            IsStore
-                                        }: any) => {
+                    Address,
+                    Organization,
+                    IsStore
+                }: any) => {
                     if (IsStore && Organization) {
                         count++;
                         delete Organization.__type;
                         delete Organization.MasterGuid;
                         delete Address.__type;
                         delete Address.Format;
-                        this.stores.push({Address, Organization, IsStore});
+                        this.stores.push({ Address, Organization, IsStore });
                     }
                 });
             }
@@ -202,7 +200,7 @@ export default class StoreLocator {
             Math.sin(dLat / 2) * Math.sin(dLat / 2) +
             Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
             Math.sin(dLon / 2) * Math.sin(dLon / 2)
-        ;
+            ;
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         const d = R * c; // Distance in km
         return d;
@@ -211,14 +209,14 @@ export default class StoreLocator {
     /**
      * Find the stores closest to a provided location
      */
-    async locateStores(location: any): Promise<MessageOptions> {
+    async locateStores(location: any): Promise<InteractionReplyOptions> {
         const count = 10; // number of "stores" to retrieve (error margin included for non-store results)
         let googleBody: any;
         try {
             const res = await fetch(StoreLocator.geocoder + encodeURIComponent(location));
             googleBody = await res.json();
         } catch (err: any) {
-            return this.generateErrorEmbed(err, "Couldn't retrieve location from Google.");
+            return { embeds: [await this.generateErrorEmbed(err, "Couldn't retrieve location from Google.")] };
         }
 
         if (googleBody.results !== null && googleBody.results.length > 0) {
@@ -230,9 +228,9 @@ export default class StoreLocator {
                 })).json();
 
                 try {
-                    return await this.generateStoreEmbed(wizardsBody.d.Results, googleBody.results[0]);
+                    return this.generateStoreEmbed(wizardsBody.d.Results, googleBody.results[0]);
                 } catch (err: any) {
-                    return await this.generateErrorEmbed(err, "Couldn't retrieve stores from Wizards.");
+                    return { embeds: [await this.generateErrorEmbed(err, "Couldn't retrieve stores from Wizards.")] };
                 }
             } else {
                 // use cached stores to calculate closest stores
@@ -248,18 +246,18 @@ export default class StoreLocator {
                 return this.generateStoreEmbed(results.slice(0, count), googleBody.results[0]);
             }
         } else {
-            return this.generateErrorEmbed(null, `Location \`${location}\` not found.`);
+            return { embeds: [await this.generateErrorEmbed(null, `Location \`${location}\` not found.`)] };
         }
     }
 
-    async generateStoreEmbed(stores: any, googleResult: any): Promise<MessageOptions> {
+    async generateStoreEmbed(stores: any, googleResult: any): Promise<InteractionReplyOptions> {
         const fields: any = [];
         const googleStaticMap = [StoreLocator.googleStaticMap];
         stores.forEach(({
-                            Address,
-                            Organization,
-                            IsStore
-                        }: any) => {
+            Address,
+            Organization,
+            IsStore
+        }: any) => {
             // only take the first 6 stores
             if (!IsStore || fields.length > 5) return;
             // calculate distance in KM
@@ -291,20 +289,24 @@ export default class StoreLocator {
                 fields: fields,
                 color: fields.length ? 0x00ff00 : 0xff0000
             }],
-            attachments: [new MessageAttachment(res.body, "location.png")]
-        };
+            files: [new AttachmentBuilder(res.body, {
+                name: "location.png"
+            })]
+        }
     }
 
     /**
      * Find all events for a store, optionally filtered by the first parameter word
-     * @param query
      */
-    async getEvents(query: any): Promise<MessageOptions> {
+    async getEvents(query: string): Promise<EmbedBuilder> {
         // check if there are filters present
         const filters: any = {};
         let parameters = query.toLowerCase().split(" ");
+        if (parameters.length == 0) {
+            throw new Error("Empty query provided.")
+        }
         while (parameters.length > 1) {
-            let filter = parameters.shift();
+            let filter: string = parameters.shift() as string;
             if (StoreLocator.eventTypes[filter]) {
                 filters.type = StoreLocator.eventTypes[filter];
             } else if (StoreLocator.eventFormats[filter]) {
@@ -324,8 +326,8 @@ export default class StoreLocator {
                         body: JSON.stringify({
                             language: "en-us",
                             request: {
-                                BusinessAddressId: stores[0].Address.Id,
-                                OrganizationId: stores[0].Organization.Id,
+                                BusinessAddressId: stores[0].item.Address.Id,
+                                OrganizationId: stores[0].item.Organization.Id,
                                 EventTypeCodes: [],
                                 PlayFormatCodes: [],
                                 ProductLineCodes: [],
@@ -339,26 +341,21 @@ export default class StoreLocator {
                 } catch (err: any) {
                     return await this.generateErrorEmbed(err, 'Error loading events from Wizards.');
                 }
-                await this.generateEventsEmbed(stores[0], events, filters);
+                return this.generateEventsEmbed(stores[0], events, filters)
             } else {
-                return await this.generateErrorEmbed(null, "No store found for `" + query + "`");
+                return this.generateErrorEmbed(null, "No store found for `" + query + "`");
             }
         }
-        return await this.generateErrorEmbed(null, "Error");
+        return this.generateErrorEmbed(null, "Error");
     }
 
     /**
      * Extract events, filter them and turn them into a pretty embed.
-     * @param Address
-     * @param Organization
-     * @param response
-     * @param filters
-     * @returns {"discord.js".MessageEmbed}
      */
     generateEventsEmbed({
-                            Address,
-                            Organization
-                        }: any, response: any, filters: any) {
+        Address,
+        Organization
+    }: any, response: any, filters: any): EmbedBuilder {
         // helper function to extract a date
         const getDate = (event: any): Date => new Date(parseFloat(event.StartDate.replace(/.*?(\d+)-.*/, '$1')));
         let footer = [];
@@ -397,22 +394,19 @@ export default class StoreLocator {
             });
         }
 
-        return new MessageEmbed({
+        return new EmbedBuilder({
             title: Organization.Name,
             description: this.generateStoreDescription(Address, Organization),
             fields: fields,
-            footer: (footer.length ? {text: 'Events have been filtered by: ' + footer.join(', ')} : undefined),
+            footer: (footer.length ? { text: 'Events have been filtered by: ' + footer.join(', ') } : undefined),
             color: 0x00ff00
         })
     }
 
     /**
      * Return a pretty printed string with the data of a store
-     * @param Address
-     * @param Organization
-     * @returns {string}
      */
-    generateStoreDescription(Address: any, Organization: any) {
+    generateStoreDescription(Address: any, Organization: any): string {
         const storeUrl = Organization.PrimaryUrl || Organization.CommunityUrl;
         const eventUrl = encodeURI(`${StoreLocator.wizardsStoreUrl}p=${Address.City},+${Address.CountryName}&c=${Address.Latitude},` +
             `${Address.Longitude}&loc=${Address.Id}&orgid=${Organization.Id}&addrid=${Address.Id}`);
@@ -434,46 +428,53 @@ export default class StoreLocator {
      * @param description
      * @returns {"discord.js".MessageEmbed}
      */
-    async generateErrorEmbed(error: any, description: any): Promise<MessageOptions> {
+    async generateErrorEmbed(error: any, description: any): Promise<EmbedBuilder> {
         if (error) {
             log.error(description, error);
         }
-        return {
-            embeds: [new MessageEmbed({
-                title: "Store & Event Locator - Error",
-                description,
-                color: 0xff0000
-            })]
-        };
+        return new EmbedBuilder({
+            title: "Store & Event Locator - Error",
+            description,
+            color: 0xff0000
+        })
     }
 
-    @Slash("events", {
+    @Slash({
+        name: "events",
         description: "Lists the details and next 6 events for a store, optionally filtered by event type or format"
     })
     async slashEvents(
-        @SlashOption("location", {description: "The name of a location, e.g. New York"})
-            location: string,
+        @SlashOption({ name: "location", description: "The name of a location, e.g. New York" })
+        location: string,
         interaction: CommandInteraction
     ) {
         if (this.storeSearch) {
-            const msg = await this.getEvents(location);
-            await interaction.reply(msg);
+            await interaction.reply({
+                embeds: [
+                    await this.getEvents(location)
+                ]
+            });
         } else {
-            await interaction.reply(await this.generateErrorEmbed(null, "The list of stores is currently reloading, please wait a few more minutes."));
+            await interaction.reply({
+                embeds: [
+                    await this.generateErrorEmbed(null, "The list of stores is currently reloading, please wait a few more minutes.")
+                ]
+            });
         }
     }
 
-    @Slash("stores", {
+    @Slash({
+        name: "stores",
         description: "Lists the first 6 stores that are closest to the specified location"
     })
     async slashStores(
-        @SlashOption("location", {description: "The name of a location, e.g. New York"})
-            location: string,
+        @SlashOption({ name: "location", description: "The name of a location, e.g. New York" })
+        location: string,
         interaction: CommandInteraction
     ) {
         // locate stores
         const sentMessage = await interaction.reply({
-            embeds: [new MessageEmbed({
+            embeds: [new EmbedBuilder({
                 title: "Store & Event Locator",
                 description: "Looking up stores near `" + location + "`..."
             })], fetchReply: true

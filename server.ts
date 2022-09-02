@@ -1,5 +1,5 @@
 import { Client } from "discordx";
-import {Interaction, Message, Options, Intents} from "discord.js";
+import {Interaction, Message, Options, GatewayIntentBits, Partials} from "discord.js";
 import * as utils from "./utils.js";
 import { dirname, importx } from "@discordx/importer";
 
@@ -10,19 +10,18 @@ log.info(`booting up...`);
 const bot = new Client({
     shards: 'auto' ,
     makeCache: Options.cacheWithLimits({
-        ...Options.defaultMakeCacheSettings,
-        MessageManager: 100
+        MessageManager: {
+            maxSize: 100, 
+        },
     }),
-    messageCacheLifetime: 60 * 10,
-    messageSweepInterval: 90,
     intents: [
-        Intents.FLAGS.DIRECT_MESSAGES,
-        Intents.FLAGS.DIRECT_MESSAGE_REACTIONS,
-        Intents.FLAGS.GUILD_MESSAGES,
-        Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
-        Intents.FLAGS.GUILDS,
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.DirectMessageReactions,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.Guilds
     ],
-    partials: [ "MESSAGE", "CHANNEL", "REACTION" ],
+    partials: [ Partials.Message, Partials.Channel, Partials.Reaction ],
     botGuilds: process.env.DEV_GUILD ? [process.env?.DEV_GUILD] : undefined
 });
 bot.on("interactionCreate", (interaction: Interaction) => {
@@ -48,12 +47,10 @@ bot.on('error', (error: any) => {
 
   bot.once("ready", async () => {
     await bot.initApplicationCommands();
-    await bot.initApplicationPermissions();
       log.info('Bot is ready! Username:', bot.user?.username, '/ Servers:', bot.guilds.cache.size );
       utils.updateServerCount(bot);
   });
 
-// bot.on("debug",console.debug);
 
 // start the engines!
 if (utils.token){

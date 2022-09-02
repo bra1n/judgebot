@@ -2,15 +2,17 @@
   "compilerOptions": {
     "experimentalDecorators": true /* Enables experimental support for ES7 decorators. */,
     "emitDecoratorMetadata": true /* Enables experimental support for emitting type metadata for decorators. */,
-    "skipLibCheck": false,
+    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "target": "ESNext",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
-    "module": "ESNext",                                /* Specify what module code is generated. */
+    "target": "ES2022",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
+    "module": "ES2022",                                /* Specify what module code is generated. */
     "esModuleInterop": true,                             /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables `allowSyntheticDefaultImports` for type compatibility. */
     "strict": true,                                      /* Enable all strict type-checking options. */
     "moduleResolution": "node",
     "baseUrl": ".",
+    "sourceMap": true
   },
+  "compileOnSave": false,
   "exclude": [
     "__modules",
     "test"

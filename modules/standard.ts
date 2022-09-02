@@ -1,6 +1,6 @@
 import * as utils from "../utils.js";
-import {Discord, Slash, SlashChoice, SlashOption, SlashOptionParams} from "discordx";
-import {CommandInteraction, Message, MessageEmbed} from "discord.js";
+import {Discord, Slash, SlashChoice, SlashOption} from "discordx";
+import {CommandInteraction, EmbedBuilder, Message} from "discord.js";
 import _ from "lodash";
 import fetch from 'node-fetch';
 
@@ -27,7 +27,7 @@ export default class Standard {
     static api = "https://whatsinstandard.com/api/v6/standard.json";
     static cacheExpireTime = 24 * 60 * 60 * 1000; //day in milliseconds
 
-    cachedEmbed: MessageEmbed | null;
+    cachedEmbed: EmbedBuilder | null;
     cachedTime: number | null;
 
     constructor() {
@@ -38,7 +38,7 @@ export default class Standard {
         });
     }
 
-    generateEmbed(setList: WhatsInStandard): MessageEmbed {
+    generateEmbed(setList: WhatsInStandard): EmbedBuilder {
         const currentDate = new Date();
         const removedFutureAndPastSetList = setList.sets.filter((set) => {
             // A set is in standard if:
@@ -54,7 +54,7 @@ export default class Standard {
         _.forEach(groupedSetList, (value, key) => {
             descriptions.push("*Rotates ", key, ":*```", value.map(set => set.name).join(" | "), "```\n");
         });
-        const embed = new MessageEmbed({
+        const embed = new EmbedBuilder({
             title: "Currently in Standard",
             url: "http://whatsinstandard.com/",
             description: descriptions.join("")
@@ -64,7 +64,7 @@ export default class Standard {
         return embed;
     }
 
-    async loadList(): Promise<MessageEmbed> {
+    async loadList(): Promise<EmbedBuilder> {
         try {
             const res = await fetch(Standard.api);
             const body = await res.json();
@@ -72,7 +72,7 @@ export default class Standard {
         }
         catch(err) {
             log.error("Error getting Standard list", err);
-            return new MessageEmbed({
+            return new EmbedBuilder({
                 title: "Standard - Error",
                 description: "Couldn't create Standard list.",
                 color: 0xff0000
@@ -80,7 +80,8 @@ export default class Standard {
         }
     }
 
-    @Slash("standard", {
+    @Slash({
+        name: "standard", 
         description: "Lists the currently standard legal sets and when they will rotate"
     })
     async standard(
@@ -90,7 +91,7 @@ export default class Standard {
             await interaction.reply({embeds: [this.cachedEmbed]});
         }
         else {
-            const embed = <MessageEmbed>await this.loadList();
+            const embed = await this.loadList();
             await interaction.reply({embeds: [embed]});
         }
     }

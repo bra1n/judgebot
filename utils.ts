@@ -4,7 +4,7 @@ import chalk from "chalk";
 import _ from "lodash";
 import {REST} from "@discordjs/rest";
 import {Routes} from "discord-api-types/v9";
-import {Guild, Client, User} from "discord.js"
+import {Guild, Client, User, ActivityType} from "discord.js"
 
 export const token = process.env?.DISCORD_TOKEN;
 if (!token){
@@ -93,7 +93,7 @@ export function updateServerCount(bot: Client){
        activities: [
            {
             name: 'MTG on '+ bot.guilds.cache.size +' servers (' + bot.ws.shards.size + ' shards)',
-            type: 'PLAYING',
+            type: ActivityType.Playing,
             url: 'https://github.com/bra1n/judgebot'
         }
        ]

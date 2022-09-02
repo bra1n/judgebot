@@ -1,10 +1,11 @@
-import {ApplicationCommandOptionChoice, AutocompleteInteraction, CommandInteraction, MessageEmbed} from "discord.js";
+import {ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, CommandInteraction} from "discord.js";
 import * as utils from "../utils.js";
 import fetch from "node-fetch";
 import _ from "lodash";
 const log = utils.getLogger('ipg');
 const IPG_ADDRESS = process.env.IPG_ADDRESS || "https://raw.githubusercontent.com/hgarus/mtgdocs/master/docs/ipg.json";
-import {DApplicationCommand, Discord, Slash, SlashChoice, SlashOption, SlashOptionParams, MetadataStorage} from "discordx";
+import {DApplicationCommand, Discord, Slash, SlashChoice, SlashOption, SlashOptionOptions, MetadataStorage} from "discordx";
+import { EmbedBuilder } from "@discordjs/builders";
 
 interface IpgEntry {
         title: string;
@@ -32,7 +33,7 @@ type IpgData = Record<string, IpgChapter | IpgSection>
 @Discord()
 export default class IPG {
     ipgData: IpgData;
-    suggestions: ApplicationCommandOptionChoice[];
+    suggestions: ApplicationCommandOptionChoiceData[];
     static location = "http://blogs.magicjudges.org/rules/ipg";
     static maxLength = 2040;
     static thumbnail = 'https://assets.magicjudges.org/judge-banner/images/magic-judge.png';
@@ -143,28 +144,30 @@ export default class IPG {
     formatChapterEntry(entry: IpgChapter) {
         const text = entry.text || this.formatPreview(this.ipgData[entry.sections[0]]);
 
-        return new MessageEmbed({
-            title: `IPG - ${entry.title}`,
-            description: _.truncate(text, {length: IPG.maxLength, separator: '\n'}),
-            thumbnail: {url: IPG.thumbnail},
-            url: entry.url
-        }).addField('Available Sections', entry.sections.map((s) => `• ${this.ipgData[s].title}`).join("\n"));
+        return new EmbedBuilder().
+            setTitle(`IPG - ${entry.title}`).
+            setDescription(_.truncate(text, {length: IPG.maxLength, separator: '\n'})).
+            setThumbnail(IPG.thumbnail).
+            setURL(entry.url)
+            .setFields({
+                name:'Available Sections',
+                value: entry.sections.map((s) => `• ${this.ipgData[s].title}`).join("\n") 
+            });
     }
 
     // IPG Section (like "2.1")
     formatSectionEntry(entry: IpgSection) {
         const text = entry.text || this.formatPreview(entry.subsectionContents[entry.subsections[0]]);
-        const embed = new MessageEmbed({
-            title: `IPG - ${entry.title}`,
-            description: _.truncate(text, {length: IPG.maxLength, separator: '\n'}),
-            thumbnail: {url: IPG.thumbnail},
-            url: entry.url
-        });
+        const embed = new EmbedBuilder()
+            .setTitle(`IPG - ${entry.title}`).
+            setDescription(_.truncate(text, {length: IPG.maxLength, separator: '\n'})).
+            setThumbnail(IPG.thumbnail).
+            setURL(entry.url)
         if (entry.penalty) {
-            embed.addField('Penalty', entry.penalty);
+            embed.addFields({name: 'Penalty',  value: entry.penalty});
         }
         if (entry.subsections.length) {
-            embed.addField('Available Subsections', entry.subsections.map((s) => `• ${s}`).join('\n'));
+            embed.addFields({name: 'Available Subsections', value: entry.subsections.map((s) => `• ${s}`).join('\n')});
         }
 
         return embed;
@@ -174,13 +177,10 @@ export default class IPG {
     formatSubsectionEntry(sectionEntry: IpgSection, subsectionEntry: IpgSubSection) {
         const otherSections = sectionEntry.subsections.filter((s) => s !== _.kebabCase(subsectionEntry.title));
 
-        return new MessageEmbed({
-            title: `IPG - ${sectionEntry.title} - ${subsectionEntry.title}`,
-            description: _.truncate(subsectionEntry.text.join("\n\n"),{length: IPG.maxLength, separator: '\n'}),
-            thumbnail: {url: IPG.thumbnail},
-            footer: {text: `Other available subsections: ${otherSections.join(', ')}`},
-            url: sectionEntry.url + '#' + subsectionEntry.title.toLowerCase().replace(/ /g,'-')
-        });
+        return new EmbedBuilder().setTitle(`IPG - ${sectionEntry.title} - ${subsectionEntry.title}`).setDescription(_.truncate(subsectionEntry.text.join("\n\n"),{length: IPG.maxLength, separator: '\n'})).
+            setThumbnail(IPG.thumbnail).
+            setFooter({text: `Other available subsections: ${otherSections.join(', ')}`}).
+            setURL(sectionEntry.url + '#' + subsectionEntry.title.toLowerCase().replace(/ /g,'-'))
     }
 
     // main lookup method
@@ -189,11 +189,15 @@ export default class IPG {
         if (!entry) {
             let availableEntries = _.keys(this.ipgData);
             availableEntries.sort();
-            return new MessageEmbed({
-                title: 'IPG - Error',
-                description: 'These parameters don\'t match any entries in the IPG.',
-                color: 0xff0000
-            }).addField('Available Chapters', this.getChapters());
+            return new EmbedBuilder().
+                setTitle('IPG - Error').
+                setDescription('These parameters don\'t match any entries in the IPG.').
+                setColor(0xff0000).setFields(
+                    {
+                        name: 'Available Chapters',
+                        value: this.getChapters()
+                    }
+                )
         }
 
         // This is a type guard, since subsections distinguishes between chapters and sections
@@ -218,13 +222,15 @@ export default class IPG {
             .join("\n");
     }
 
-    @Slash("ipg", {
+    @Slash({
+        name: "ipg",
         description: "Show an entry from the Infraction Procedure Guide",
     })
     async ipg(
-        @SlashOption("section", {
+        @SlashOption({
+            name: "section", 
             description: 'IPG section number e.g. "2.5", or an alias for one e.g. "grv" (Game Rule Violation)',
-            type: "STRING",
+            type: ApplicationCommandOptionType.String,
             autocomplete: async function(this: IPG, interaction: AutocompleteInteraction, cmd: DApplicationCommand){
                 const query = interaction.options.data.filter(opt => opt.name === "section")[0];
                 await interaction.respond(
@@ -235,7 +241,8 @@ export default class IPG {
             }
         })
        lookup: string,
-        @SlashOption("subsection", {
+        @SlashOption({
+            name: "subsection", 
             description: 'Subsection name, e.g. "philosophy"',
             required: false
         })

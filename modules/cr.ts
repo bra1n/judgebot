@@ -10,10 +10,10 @@ import fetch from 'node-fetch';
 import _ from "lodash";
 import iconv from "iconv-lite";
 import {DApplicationCommand, Discord, Slash, SlashChoice, SlashOption, SlashOptionParams} from "discordx";
-import flexsearch from 'flexsearch';
+import flexsearch from 'flexsearch'; 
 
 const log = utils.getLogger('cr');
-const CR_ADDRESS = process.env.CR_ADDRESS || "http://cr.vensersjournal.com";
+const CR_ADDRESS = process.env.CR_ADDRESS || "https://api.academyruins.com/link/cr";
 
 @Discord()
 export default class CR {

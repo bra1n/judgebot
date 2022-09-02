@@ -1,14 +1,11 @@
-/* eslint-env mocha */
-const MTR = require('../../modules/rules/mtr');
-const _ = require('lodash');
-const chai = require('chai');
-const cheerio = require('cheerio');
-const fs = require('fs');
-
-const expect = chai.expect;
+import MTR from "../../modules/mtr.js";
+import _ from "lodash";
+import {expect} from "chai";
+import * as cheerio from "cheerio";
+import * as fs from "fs";
 
 describe('MTR', function () {
-    let mtr;
+    let mtr: any;
     beforeEach(function () {
         mtr = new MTR(false);
     });
@@ -34,10 +31,10 @@ describe('MTR', function () {
         });
         describe('#handleChapter', function () {
             it('should produce chapter entries for each chapter', function () {
-                 const $ = cheerio.load('<body><h4 class="chapter-header">1. A Chapter</h4><h4>1.1 A Section</h4><p>Some Content</p><h4 class="chapter-header">2. Another Chapter</h4>');
-                 mtr.handleChapters($);
-                 expect(mtr.mtrData.chapters).to.have.deep.property('1.title', '1. A Chapter');
-                 expect(mtr.mtrData.chapters).to.have.deep.property('2.title', '2. Another Chapter');
+                const $ = cheerio.load('<body><h4 class="chapter-header">1. A Chapter</h4><h4>1.1 A Section</h4><p>Some Content</p><h4 class="chapter-header">2. Another Chapter</h4>');
+                mtr.handleChapters($);
+                expect(mtr.mtrData.chapters).to.have.deep.property('1.title', '1. A Chapter');
+                expect(mtr.mtrData.chapters).to.have.deep.property('2.title', '2. Another Chapter');
             });
         });
         describe('#handleSection', function () {
@@ -47,13 +44,13 @@ describe('MTR', function () {
                     '<h4 class="section-header">1.2 Another Section</h4>',
                     '<h4 class="section-header">Appendix A-An Appendix</h4>'].join('\n'));
                 mtr.handleChapters($);
-                mtr.handleSections($); 
+                mtr.handleSections($);
             });
-             
+
             it('should produce section entries for each section', function () {
                 expect(mtr.mtrData.sections).to.have.deep.property('1\\.1.title', '1.1 A Section');
                 expect(mtr.mtrData.sections).to.have.deep.property('1\\.1.content', 'Some Content');
-           
+
                 expect(mtr.mtrData.sections).to.have.deep.property('1\\.2.title', '1.2 Another Section');
             });
             it('should add section entries to the appropriate chapter', function () {
@@ -78,9 +75,9 @@ describe('MTR', function () {
             });
         });
         describe('#formatChapter', function () {
-            let chapter;
+            let chapter: any;
             before(function () {
-                mtr.mtrData.sections = {'1.1' : {title: '1.1 A Section'}, '1.2': {title: '1.2 Another Section'}};
+                mtr.mtrData.sections = {'1.1': {title: '1.1 A Section'}, '1.2': {title: '1.2 Another Section'}};
                 chapter = mtr.formatChapter({title: '1. A Chapter', sections: ['1.1', '1.2']});
             });
             it('should contain the title', function () {
@@ -91,8 +88,8 @@ describe('MTR', function () {
             })
         });
         describe('#formatSection', function () {
-            let section;
-            let sectionText;
+            let section: any;
+            let sectionText: any;
             beforeEach(function () {
                 section = {title: '1.1 A Section', content: 'The section\'s content', key: '1.1'};
                 sectionText = mtr.formatSection(section);
@@ -112,10 +109,10 @@ describe('MTR', function () {
             });
         });
     });
-     describe('tests based on real data', function() {
-        let mtr;
+    describe('tests based on real data', function () {
+        let mtr: any;
 
-        before(function () {
+        before(function (this: any) {
             this.timeout(5000);
             mtr = new MTR(false);
             mtr.init(fs.readFileSync(`${__dirname}/mtr.html`, 'utf8'));
@@ -123,23 +120,23 @@ describe('MTR', function () {
         it('should have downloaded and parsed the mtr', function () {
             expect(mtr.mtrData.chapters).to.have.keys(_.flatten([_.range(1, 11).map(_.toString), 'appendices']));
 
-            expect(mtr.mtrData.sections).to.contain.keys(_.range(1, 11).map(n => `${n}.1`));
+            expect(mtr.mtrData.sections).to.contain.keys(_.range(1, 11).map((n: any) => `${n}.1`));
         });
 
-         describe('#find', function() {
-            it('should work for chapter queries', function() {
+        describe('#find', function () {
+            it('should work for chapter queries', function () {
                 expect(mtr.find('2')).to.contain('Tournament Mechanics');
             });
-            it('should work for section queries', function() {
+            it('should work for section queries', function () {
                 expect(mtr.find('4.4')).to.contain('Players are expected to remember their own triggered abilities');
             });
 
-            it('should give an error on unknown chapters', function() {
+            it('should give an error on unknown chapters', function () {
                 expect(mtr.find('11')).to.contain('not exist').and.to.contain('Available Chapters');
             });
-             it('should give an error on unknown chapters', function() {
+            it('should give an error on unknown chapters', function () {
                 expect(mtr.find('8.7')).to.contain('not exist').and.to.contain('available sections');
             });
         });
-     });
+    });
 });

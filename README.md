@@ -1,9 +1,9 @@
 # MTG Discord Bot
-[![Discord Bots](https://discordbots.org/api/widget/240537940378386442.png)](https://discordbots.org/bot/240537940378386442?utm_source=widget)
+![image](https://user-images.githubusercontent.com/325521/188140411-1940ede3-045c-47db-adef-0ee9f9cfe0bc.png)
 
 Discord Bot for Magic / Judge related content
 
-[Add the bot to your server](https://discordapp.com/oauth2/authorize?client_id=240537940378386442&scope=bot&permissions=314432)
+[Add the bot to your server](https://discord.com/api/oauth2/authorize?client_id=240537940378386442&permissions=274878187520&scope=applications.commands%20bot)
 
 ## Supported commands
 

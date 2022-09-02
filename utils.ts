@@ -6,56 +6,9 @@ import {REST} from "@discordjs/rest";
 import {Routes} from "discord-api-types/v9";
 import {Guild, Client, User, ActivityType} from "discord.js"
 
-export const token = process.env?.DISCORD_TOKEN;
-if (!token){
+export const token: string = process.env?.DISCORD_TOKEN as string;
+if (!token) {
     throw new Error("Token required.");
-}
-const rest = new REST({ version: '9' }).setToken(token);
-
-export const modules = [
-    'card',
-    'hangman',
-    'standard',
-    // 'store',
-    'rules/cr',
-    'rules/ipg',
-    'rules/mtr',
-    'rules/jar',
-    'help'
-];
-
-/**
- * Update discord's list of our slash commands
- */
-export const updateInteractions = async () => {
-    const log = getLogger('bot');
-    const interactions: any = [];
-    modules.forEach((module, index) => {
-        const moduleObject = new (require("./modules/" + module + '.js'))(modules);
-            if ("getInteractions" in moduleObject){
-                _.forEach(moduleObject.getInteractions(), (value: any, key: any) => {
-                    interactions.push(value.parser.toJSON())
-                });
-            }
-    });
-
-	try {
-        log.info('Finding bot ID');
-        const identity: any = await rest.get(
-            Routes.user()
-        )
-
-		log.info('Started refreshing application (/) commands.');
-
-		const updateResult = await rest.put(
-			Routes.applicationCommands(identity.id) ,
-			{ body: interactions },
-		);
-
-		log.info('Successfully reloaded application (/) commands.');
-	} catch (error) {
-		console.error(error);
-	}
 }
 
 // setup logger

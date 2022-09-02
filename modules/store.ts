@@ -439,10 +439,11 @@ export default class StoreLocator {
         })
     }
 
-    @Slash({
-        name: "events",
-        description: "Lists the details and next 6 events for a store, optionally filtered by event type or format"
-    })
+    // Disabling this command for now
+    // @Slash({
+    //     name: "events",
+    //     description: "Lists the details and next 6 events for a store, optionally filtered by event type or format"
+    // })
     async slashEvents(
         @SlashOption({ name: "location", description: "The name of a location, e.g. New York" })
         location: string,
@@ -463,10 +464,11 @@ export default class StoreLocator {
         }
     }
 
-    @Slash({
-        name: "stores",
-        description: "Lists the first 6 stores that are closest to the specified location"
-    })
+    // Disabling this command for now
+    // @Slash({
+    //     name: "stores",
+    //     description: "Lists the first 6 stores that are closest to the specified location"
+    // })
     async slashStores(
         @SlashOption({ name: "location", description: "The name of a location, e.g. New York" })
         location: string,

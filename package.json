@@ -2,13 +2,15 @@
   "name": "judgebot",
   "version": "1.0.0",
   "description": "discord bot for judges",
-  "main": "server.js",
   "engines": {
-    "node": "8.4.0"
+    "node": "^12.20.0 || ^14.13.1 || >=16.0.0"
   },
+  "module": "es2022",
+  "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "test": "mocha --recursive test"
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "serve": "npm run build && node server.js"
   },
   "repository": {
     "type": "git",
@@ -20,19 +22,43 @@
     "url": "https://github.com/bra1n/judgebot/issues"
   },
   "dependencies": {
-    "@discordjs/collection": "^0.1.5",
-    "chalk": "^2.4.2",
-    "cheerio": "^1.0.0-rc.3",
-    "discord.js": "^12.2.0",
-    "fuse.js": "^3.6.1",
-    "iconv-lite": "^0.4.24",
+    "@discordjs/builders": "^1.2.0",
+    "@discordjs/collection": "^1.1.0",
+    "@discordjs/rest": "^1.1.0",
+    "@discordx/importer": "^1.1.10",
+    "@types/cheerio": "^0.22.31",
+    "chalk": "^5.0.1",
+    "cheerio": "1.0.0-rc.12",
+    "discord-api-types": "^0.37.5",
+    "discord.js": "^14.3.0",
+    "discordx": "^11.1.12",
+    "flexsearch": "^0.7.21",
+    "fuse.js": "^6.6.2",
+    "iconv-lite": "^0.6.3",
     "lodash": "^4.17.21",
-    "log4js": "^6.4.0",
+    "log4js": "^6.6.1",
+    "node-fetch": "^3.2.10",
     "request": "^2.88.2",
-    "request-promise-native": "^1.0.8"
+    "request-promise-native": "^1.0.9",
+    "scryfall-sdk": "^3.1.0"
   },
   "devDependencies": {
-    "chai": "^3.5.0",
-    "mocha": "^7.1.1"
+    "@oclif/core": "^1.16.0",
+    "@types/chai": "^4.3.3",
+    "@types/flexsearch": "^0.7.3",
+    "@types/jsdom": "^20.0.0",
+    "@types/lodash": "^4.14.184",
+    "@types/lunr": "^2.3.4",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "^18.7.14",
+    "@types/pdf-parse": "^1.1.1",
+    "@types/request": "^2.48.8",
+    "@types/request-promise-native": "^1.0.18",
+    "chai": "^4.3.6",
+    "mocha": "^10.0.0",
+    "nodemon": "^2.0.19",
+    "prettier": "^2.7.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.8.2"
   }
 }

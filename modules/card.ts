@@ -21,6 +21,9 @@ import fetch from "node-fetch";
 import _ from "lodash";
 import * as utils from "../utils.js";
 import * as Scry from "scryfall-sdk";
+import MagicEmitter, {
+  MagicArray,
+} from "scryfall-sdk/out/util/MagicEmitter.js";
 
 const log = utils.getLogger("card");
 
@@ -401,13 +404,29 @@ export default class MtgCardLoader {
     };
   }
 
+  async waitForAll<T>(emitter: MagicEmitter<T, any>) {
+    return new Promise<MagicArray<T, any>>((resolve, reject) => {
+      const results: MagicArray<T, any> = [] as any;
+      results.not_found = [];
+      emitter.on("data", (result) => {
+        results.push(result);
+      });
+      emitter.on("not_found", (notFound) => {
+        results.not_found.push(notFound);
+      });
+      emitter.on("end", () => resolve(results));
+      emitter.on("cancel", () => resolve(results));
+      emitter.on("error", reject);
+    });
+  }
+
   /**
    * Fetch the cards from Scryfall
    */
   async getCards(cardName: string): Promise<Scry.Card[]> {
-    let cards = await Scry.Cards.search(cardName, { include_extras: true })
-      .cancelAfterPage()
-      .waitForAll();
+    let cards = await this.waitForAll(
+      Scry.Cards.search(cardName, { include_extras: false }).cancelAfterPage()
+    );
     if (cards.length > 0) {
       // sort the cards to better match the search query (issue #87)
       return cards.sort(

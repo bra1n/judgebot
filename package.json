@@ -40,7 +40,7 @@
     "node-fetch": "^3.2.10",
     "request": "^2.88.2",
     "request-promise-native": "^1.0.9",
-    "scryfall-sdk": "^3.1.0"
+    "scryfall-sdk": ">=3.2.1"
   },
   "devDependencies": {
     "@oclif/core": "^1.16.0",

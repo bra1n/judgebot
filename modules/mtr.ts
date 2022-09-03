@@ -84,7 +84,7 @@ export default class MTR {
   cleanup($: cheerio.Root) {
     // get description from body
     const body = $("body");
-    this.mtrData.description = body.get(0).childNodes[0].data.trim() || "";
+    this.mtrData.description = body.get(0).childNodes[0].data?.trim() || "";
 
     // wrap standalone text nodes in p tags
     // @ts-ignore

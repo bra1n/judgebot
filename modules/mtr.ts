@@ -162,10 +162,10 @@ export default class MTR {
       .nextUntil(".section-header,.chapter-header")
       .wrap("<div></div>")
       .parent();
-    // @ts-ignore
     sectionContent
       .find("h4")
-      .replaceWith((i, e) => `<p>\n\n**${$(e).text().trim()}**\n\n</p>`);
+      // @ts-ignore
+      .replaceWith((_i, e) => `<p>\n\n**${$(e).text().trim()}**\n\n</p>`);
 
     // clean up line breaks
     return sectionContent

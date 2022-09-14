@@ -30,7 +30,7 @@ export default class CR {
   crData: Record<string, string>;
   static location = "http://yawgatog.com/resources/magic-rules/";
   static thumbnail =
-    "https://assets.magicjudges.org/judge-banner/images/magic-judge.png";
+    "https://yawgatog.com/icon-180x180.png";
   static maxLength = 2040;
   constructor() {
     this.glossary = {};

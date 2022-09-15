@@ -28,9 +28,9 @@ export default class CR {
   suggestions: flexsearch.Index;
   glossary: Record<string, string>;
   crData: Record<string, string>;
-  static location = "http://blogs.magicjudges.org/rules/cr";
+  static location = "http://yawgatog.com/resources/magic-rules/";
   static thumbnail =
-    "https://assets.magicjudges.org/judge-banner/images/magic-judge.png";
+    "https://yawgatog.com/icon-180x180.png";
   static maxLength = 2040;
   constructor() {
     this.glossary = {};
@@ -242,7 +242,7 @@ export default class CR {
       embed
         .setTitle("CR - Rule " + rule.replace(/ ex$/, " Examples"))
         .setDescription(this.appendSubrules(rule))
-        .setURL(CR.location + rule.substr(0, 3) + "/");
+        .setURL(CR.location + '#R' + rule.replace('.', ''));
       if (this.crData[rule + " ex"]) {
         embed.setFooter({
           text: `Use /${interaction.commandName} examples: True to see examples.`,
@@ -253,7 +253,7 @@ export default class CR {
       embed
         .setTitle(`CR - Glossary for "${rule}"`)
         .setDescription(this.glossary[rule])
-        .setURL(CR.location + "/cr-glossary/");
+        .setURL(CR.location + "#" + rule.toLowerCase());
       const gloss = this.glossary[rule].match(/rule (\d+\.\w+)/i);
       if (gloss && this.crData[rule[1]]) {
         embed.addFields({

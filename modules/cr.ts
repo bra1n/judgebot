@@ -23,14 +23,9 @@ const CR_ADDRESS =
   process.env.CR_ADDRESS || "https://api.academyruins.com/link/cr";
 
 // the glossary dict also stores shorthand keys for fuzzy searching, so we need to store the full entry to properly link to it
-class GlossaryEntry {
+interface GlossaryEntry {
   term: string;
   definition: string;
-
-  constructor(term: string, definition: string) {
-    this.term = term;
-    this.definition = definition;
-  }
 }
 
 @Discord()
@@ -123,9 +118,9 @@ export default class CR {
       }
       const definition = `**${term}**\n${this.highlightRules(def.join("\n"))}`;
       term = term.toLowerCase();
-      const entry = new GlossaryEntry(term, definition);
+      const glossaryEntry: GlossaryEntry = {term, definition};
       for (const t of term.split(",")) {
-        glossaryEntries[t.trim()] = entry;
+        glossaryEntries[t.trim()] = glossaryEntry;
       }
     }
     return glossaryEntries;

@@ -189,7 +189,7 @@ export default class CR {
 
   // transform a rule / glossary name to a Yawgatog compatible HTML id
   ruleToUrlSegment(rule: string): string {
-	  return rule.toLowerCase()
+    return rule.toLowerCase()
       .replace(/ ex$/, "") // examples don't have an id, just link to the corresponding rule
       .replace(/["',.]/g, "") // quotes, commas and dots are removed
       .replace(/[^a-z0-9-]/g, "_") // anything besides alphanum chars and hyphens becomes underscores
@@ -255,7 +255,7 @@ export default class CR {
       return;
     }
 
-	  rule = rule.toLowerCase(); // all dictionaries are keyed by lower case strings
+    rule = rule.toLowerCase(); // all dictionaries are keyed by lower case strings
 
     // check first for CR paragraph match
     if (this.crData[rule]) {

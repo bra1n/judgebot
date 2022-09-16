@@ -28,7 +28,7 @@ export default class CR {
   suggestions: flexsearch.Index;
   glossary: Record<string, string>;
   crData: Record<string, string>;
-  static location = "http://yawgatog.com/resources/magic-rules/";
+  static location = "https://yawgatog.com/resources/magic-rules/";
   static thumbnail =
     "https://yawgatog.com/icon-180x180.png";
   static maxLength = 2040;
@@ -177,6 +177,10 @@ export default class CR {
     return _.truncate(description, { length, separator: "\n" });
   }
 
+  ruleToUrlSegment(rule: string): string {
+	return rule.replace(/ ex$/, "").replace(/["',.]/g, "").replace(/[^a-z0-9-]/g, "_").replaceAll("_obsolete_", "").replace(/__+/g, "_").replace(/^_|_$/g, "")
+  }
+
   @Slash({
     name: "cr",
     description: "Show a rule or definition from the Comprehensive Rulebook",
@@ -234,6 +238,8 @@ export default class CR {
       return;
     }
 
+	  rule = rule.toLowerCase();
+
     // check first for CR paragraph match
     if (this.crData[rule]) {
       if (ex) {
@@ -242,7 +248,7 @@ export default class CR {
       embed
         .setTitle("CR - Rule " + rule.replace(/ ex$/, " Examples"))
         .setDescription(this.appendSubrules(rule))
-        .setURL(CR.location + '#R' + rule.replace('.', ''));
+        .setURL(CR.location + '#R' + this.ruleToUrlSegment(rule));
       if (this.crData[rule + " ex"]) {
         embed.setFooter({
           text: `Use /${interaction.commandName} examples: True to see examples.`,
@@ -253,7 +259,7 @@ export default class CR {
       embed
         .setTitle(`CR - Glossary for "${rule}"`)
         .setDescription(this.glossary[rule])
-        .setURL(CR.location + "#" + rule.toLowerCase());
+        .setURL(CR.location + "#" + this.ruleToUrlSegment(rule));
       const gloss = this.glossary[rule].match(/rule (\d+\.\w+)/i);
       if (gloss && this.crData[rule[1]]) {
         embed.addFields({

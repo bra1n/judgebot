@@ -122,8 +122,10 @@ export default class CR {
         continue;
       }
       const definition = `**${term}**\n${this.highlightRules(def.join("\n"))}`;
+      term = term.toLowerCase();
+      const entry = new GlossaryEntry(term, definition);
       for (const t of term.split(",")) {
-        glossaryEntries[t.trim().toLowerCase()] = new GlossaryEntry(term, definition);
+        glossaryEntries[t.trim()] = entry;
       }
     }
     return glossaryEntries;
@@ -189,7 +191,7 @@ export default class CR {
 
   // transform a rule / glossary name to a Yawgatog compatible HTML id
   ruleToUrlSegment(rule: string): string {
-    return rule.toLowerCase()
+    return rule
       .replace(/ ex$/, "") // examples don't have an id, just link to the corresponding rule
       .replace(/["',.]/g, "") // quotes, commas and dots are removed
       .replace(/[^a-z0-9-]/g, "_") // anything besides alphanum chars and hyphens becomes underscores

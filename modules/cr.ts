@@ -14,7 +14,6 @@ import {
   DApplicationCommand,
   Discord,
   Slash,
-  SlashChoice,
   SlashOption,
 } from "discordx";
 import flexsearch from "flexsearch";
@@ -23,10 +22,21 @@ const log = utils.getLogger("cr");
 const CR_ADDRESS =
   process.env.CR_ADDRESS || "https://api.academyruins.com/link/cr";
 
+// the glossary dict also stores shorthand keys for fuzzy searching, so we need to store the full entry to properly link to it
+class GlossaryEntry {
+  term: string;
+  definition: string;
+
+  constructor(term: string, definition: string) {
+    this.term = term;
+    this.definition = definition;
+  }
+}
+
 @Discord()
 export default class CR {
   suggestions: flexsearch.Index;
-  glossary: Record<string, string>;
+  glossary: Record<string, GlossaryEntry>;
   crData: Record<string, string>;
   static location = "https://yawgatog.com/resources/magic-rules/";
   static thumbnail =
@@ -101,7 +111,7 @@ export default class CR {
   }
 
   parseGlossary(glossaryText: string) {
-    const glossaryEntries: Record<string, string> = {};
+    const glossaryEntries: Record<string, GlossaryEntry> = {};
 
     for (const entry of glossaryText.split("\n\n")) {
       if (!entry.trim()) {
@@ -113,7 +123,7 @@ export default class CR {
       }
       const definition = `**${term}**\n${this.highlightRules(def.join("\n"))}`;
       for (const t of term.split(",")) {
-        glossaryEntries[t.trim().toLowerCase()] = definition;
+        glossaryEntries[t.trim().toLowerCase()] = new GlossaryEntry(term, definition);
       }
     }
     return glossaryEntries;
@@ -121,7 +131,7 @@ export default class CR {
 
   parseRules(
     crText: string,
-    glossaryEntries: Record<string, string>
+    glossaryEntries: Record<string, GlossaryEntry>
   ): Record<string, string> {
     const ruleNumberPrefixRe = /^(\d{3}\.\w*)\.?/;
     const crEntries: Record<string, string> = {};
@@ -177,8 +187,15 @@ export default class CR {
     return _.truncate(description, { length, separator: "\n" });
   }
 
+  // transform a rule / glossary name to a Yawgatog compatible HTML id
   ruleToUrlSegment(rule: string): string {
-	return rule.replace(/ ex$/, "").replace(/["',.]/g, "").replace(/[^a-z0-9-]/g, "_").replaceAll("_obsolete_", "").replace(/__+/g, "_").replace(/^_|_$/g, "")
+	  return rule.toLowerCase()
+      .replace(/ ex$/, "") // examples don't have an id, just link to the corresponding rule
+      .replace(/["',.]/g, "") // quotes, commas and dots are removed
+      .replace(/[^a-z0-9-]/g, "_") // anything besides alphanum chars and hyphens becomes underscores
+      .replaceAll("_obsolete_", "") // "obsolete" is not part of the id
+      .replace(/__+/g, "_") // reduce multiple consequent underscores to one
+      .replace(/^_|_$/g, "") // remove leading/trailing underscores
   }
 
   @Slash({
@@ -238,7 +255,7 @@ export default class CR {
       return;
     }
 
-	  rule = rule.toLowerCase();
+	  rule = rule.toLowerCase(); // all dictionaries are keyed by lower case strings
 
     // check first for CR paragraph match
     if (this.crData[rule]) {
@@ -255,12 +272,13 @@ export default class CR {
         });
       }
     } else if (this.glossary[rule]) {
-      // try to find a match in the glossary while stripping of parameters until there are none left or they match
+      const entry = this.glossary[rule];
+
       embed
         .setTitle(`CR - Glossary for "${rule}"`)
-        .setDescription(this.glossary[rule])
-        .setURL(CR.location + "#" + this.ruleToUrlSegment(rule));
-      const gloss = this.glossary[rule].match(/rule (\d+\.\w+)/i);
+        .setDescription(entry.definition)
+        .setURL(CR.location + "#" + this.ruleToUrlSegment(entry.term));
+      const gloss = entry.definition.match(/rule (\d+\.\w+)/i);
       if (gloss && this.crData[rule[1]]) {
         embed.addFields({
           name: "CR - Rule " + rule[1],

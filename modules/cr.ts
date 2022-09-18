@@ -184,15 +184,19 @@ export default class CR {
     return _.truncate(description, { length, separator: "\n" });
   }
 
-  // transform a rule / glossary name to a Yawgatog compatible HTML id
-  ruleToUrlSegment(rule: string): string {
-    return rule
+  // transform a rule / glossary name to a Yawgatog link
+  ruleToUrl(rule: string, isGlossary: boolean): string {
+    let url = CR.location + '#';
+    if (!isGlossary) url += 'R';
+    url += rule.toLowerCase()
       .replace(/ ex$/, "") // examples don't have an id, just link to the corresponding rule
       .replace(/["',.]/g, "") // quotes, commas and dots are removed
       .replace(/[^a-z0-9-]/g, "_") // anything besides alphanum chars and hyphens becomes underscores
       .replaceAll("_obsolete_", "") // "obsolete" is not part of the id
       .replace(/__+/g, "_") // reduce multiple consequent underscores to one
       .replace(/^_|_$/g, "") // remove leading/trailing underscores
+
+    return url;
   }
 
   @Slash({
@@ -262,7 +266,7 @@ export default class CR {
       embed
         .setTitle("CR - Rule " + rule.replace(/ ex$/, " Examples"))
         .setDescription(this.appendSubrules(rule))
-        .setURL(CR.location + '#R' + this.ruleToUrlSegment(rule));
+        .setURL(this.ruleToUrl(rule, false));
       if (this.crData[rule + " ex"]) {
         embed.setFooter({
           text: `Use /${interaction.commandName} examples: True to see examples.`,
@@ -274,7 +278,7 @@ export default class CR {
       embed
         .setTitle(`CR - Glossary for "${rule}"`)
         .setDescription(entry.definition)
-        .setURL(CR.location + "#" + this.ruleToUrlSegment(entry.term));
+        .setURL(this.ruleToUrl(entry.term, true));
       const gloss = entry.definition.match(/rule (\d+\.\w+)/i);
       if (gloss && this.crData[rule[1]]) {
         embed.addFields({

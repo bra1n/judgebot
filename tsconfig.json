@@ -19,7 +19,7 @@
   ],
     "ts-node": {
     "compilerOptions": {
-      "module": "CommonJS"
+      "module": "ES2022"
     }
   }
 }

@@ -56,7 +56,7 @@ export default class CR {
     try {
       const res = await fetch(CR_ADDRESS);
       const buff = await res.buffer();
-      this.parseCr(iconv.decode(buff, "utf-8"));
+      this.parseCr(iconv.decode(buff, "utf-16"));
       this.buildSuggestions();
     } catch (err) {
       log.error("Error loading CR: " + err);

@@ -20,7 +20,7 @@ import flexsearch from "flexsearch";
 
 const log = utils.getLogger("cr");
 const CR_ADDRESS =
-  process.env.CR_ADDRESS || "https://api.academyruins.com/link/cr";
+  process.env.CR_ADDRESS || "https://api.academyruins.com/file/cr";
 
 // the glossary dict also stores shorthand keys for fuzzy searching, so we need to store the full entry to properly link to it
 interface GlossaryEntry {
@@ -56,7 +56,7 @@ export default class CR {
     try {
       const res = await fetch(CR_ADDRESS);
       const buff = await res.arrayBuffer();
-      this.parseCr(iconv.decode(Buffer.from(buff), "utf-16"));
+      this.parseCr(iconv.decode(Buffer.from(buff), "utf-8"));
       this.buildSuggestions();
     } catch (err) {
       log.error("Error loading CR: " + err);
@@ -88,9 +88,6 @@ export default class CR {
   }
 
   parseCr(crText: string) {
-    // Standardise all linebreaks. \r\n → \n for pre-2020 rules, but for 2020 we have to \r → \n
-    crText = crText.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-
     let rulesText = crText.substring(crText.search("\nCredits\n") + 9).trim();
     const glossaryStartIndex = rulesText.search("\nGlossary\n") + 10;
     const glossaryText = rulesText
